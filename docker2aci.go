@@ -494,7 +494,12 @@ func ImportLayer(layerID string, repoData *RepoData, dockerURL *DockerURL, dataS
 	f.Write(manifestBytes)
 	f.Sync()
 
-	aciPath, err := BuildACI(layerID, tmpDir, layerDest)
+	currentDir, err := os.Getwd()
+	if err != nil {
+		return "", err
+	}
+
+	aciPath, err := BuildACI(layerID, currentDir, layerDest)
 	if err != nil {
 		return "", fmt.Errorf("Error building ACI: %v", err)
 	}
