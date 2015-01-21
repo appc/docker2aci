@@ -487,7 +487,7 @@ func ImportLayer(layerID string, repoData *RepoData, dockerURL *DockerURL, dataS
 
 	f, err := os.Create(filepath.Join(layerDest, aci.ManifestFile))
 	if err != nil {
-		return "", fmt.Errorf("Error creating manifest file")
+		return "", fmt.Errorf("Error creating manifest file: %v", err)
 	}
 	defer f.Close()
 
