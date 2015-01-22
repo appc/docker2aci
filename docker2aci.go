@@ -266,6 +266,7 @@ func GenerateManifest(layerData DockerImageData, dockerURL *DockerURL) (*schema.
 	genManifest.ACKind = types.ACKind("ImageManifest")
 
 	var labels types.Labels
+	var parentLabels types.Labels
 
 	layer, _ := types.NewACName("layer")
 	labels = append(labels, types.Label{Name: *layer, Value: layerData.ID})
@@ -273,6 +274,17 @@ func GenerateManifest(layerData DockerImageData, dockerURL *DockerURL) (*schema.
 	tag := dockerURL.Tag
 	version, _ := types.NewACName("version")
 	labels = append(labels, types.Label{Name: *version, Value: tag})
+
+	if layerData.OS != "" {
+		os, _ := types.NewACName("os")
+		labels = append(labels, types.Label{Name: *os, Value: layerData.OS})
+		parentLabels = append(parentLabels, types.Label{Name: *os, Value: layerData.OS})
+
+		if layerData.Architecture != "" {
+			arch, _ := types.NewACName("arch")
+			parentLabels = append(parentLabels, types.Label{Name: *arch, Value: layerData.Architecture})
+		}
+	}
 
 	genManifest.Labels = labels
 
@@ -294,7 +306,8 @@ func GenerateManifest(layerData DockerImageData, dockerURL *DockerURL) (*schema.
 			return nil, err
 		}
 
-		dependencies = append(dependencies, types.Dependency{App: *parentAppName})
+		dependencies = append(dependencies, types.Dependency{App: *parentAppName, Labels: parentLabels})
+
 		genManifest.Dependencies = dependencies
 	}
 
@@ -466,7 +479,18 @@ func BuildACI(layerID string, repoData *RepoData, dockerURL *DockerURL) (string,
 		return "", err
 	}
 
-	aciPath := layerID + ".aci"
+	aciPath := dockerURL.ImageName + "-" + layerID
+	if dockerURL.Tag != "" {
+		aciPath += "-" + dockerURL.Tag
+	}
+	if layerData.OS != "" {
+		aciPath += "-" + layerData.OS
+		if layerData.Architecture != "" {
+			aciPath += "-" + layerData.Architecture
+		}
+	}
+	aciPath += ".aci"
+
 	if err := WriteACI(layer, manifestBytes, aciPath); err != nil {
 		return "", fmt.Errorf("Error writing ACI: %v", err)
 	}
