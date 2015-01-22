@@ -163,7 +163,7 @@ func GetRemoteLayer(imgID, registry string, token []string, imgSize int64) (io.R
 
 	setAuthToken(req, token)
 
-	fmt.Printf("%s: Downloading layer\n", imgID)
+	fmt.Printf("Downloading layer: %s\n", imgID)
 
 	res, err := client.Do(req)
 	if err != nil {
@@ -471,6 +471,8 @@ func BuildACI(layerID string, repoData *RepoData, dockerURL *DockerURL) (string,
 		return "", fmt.Errorf("Error writing ACI: %v", err)
 	}
 
+	fmt.Printf("Generated ACI: %s\n", aciPath)
+
 	return aciPath, nil
 }
 
@@ -482,12 +484,12 @@ func ImportACI(aciPath string, dataStore *cas.Store) (string, error) {
 		defer aciFile.Close()
 
 		aciReader := bufio.NewReader(aciFile)
-		parentImageID, err := dataStore.WriteACI(aciReader)
+		rocketImageID, err := dataStore.WriteACI(aciReader)
 		if err != nil {
 			return "", err
 		}
 
-		return parentImageID, nil
+		return rocketImageID, nil
 }
 
 func runDocker2ACI(arg string, importACI bool) error {
@@ -518,8 +520,7 @@ func runDocker2ACI(arg string, importACI bool) error {
 		return err
 	}
 
-	var rocketAppImageID string
-	rocketAppImageID = "not imported"
+	rocketAppImageID := ""
 
 	// From base image
 	for i := range(ancestry) {
@@ -538,12 +539,12 @@ func runDocker2ACI(arg string, importACI bool) error {
 			}
 
 			if layerID == appImageID {
-				rocketAppImageID = rocketLayerID
+				rocketAppImageID = rocketLayerID + "\n"
 			}
 		}
 	}
 
-	fmt.Println(rocketAppImageID)
+	fmt.Printf(rocketAppImageID)
 	return nil
 }
 
