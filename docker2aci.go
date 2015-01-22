@@ -496,7 +496,8 @@ func BuildACI(layerID string, repoData *RepoData, dockerURL *DockerURL) (string,
 		return "", err
 	}
 
-	aciPath := dockerURL.ImageName + "-" + layerID
+	imageName := strings.Replace(dockerURL.ImageName, "/", "-", -1)
+	aciPath := imageName + "-" + layerID
 	if dockerURL.Tag != "" {
 		aciPath += "-" + dockerURL.Tag
 	}
