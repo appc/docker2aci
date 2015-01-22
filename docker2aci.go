@@ -306,8 +306,13 @@ func GenerateManifest(layerData DockerImageData, dockerURL *DockerURL) (*schema.
 	genManifest.Labels = labels
 
 	if dockerConfig != nil {
+		var exec types.Exec
 		if len(dockerConfig.Cmd) > 0 {
-			exec := types.Exec(dockerConfig.Cmd)
+			exec = types.Exec(dockerConfig.Cmd)
+		} else if len(dockerConfig.Entrypoint) > 0 {
+			exec = types.Exec(dockerConfig.Entrypoint)
+		}
+		if exec != nil {
 			// TODO(iaguis) populate user and group
 			app := &types.App{Exec: exec, User: "0", Group: "0"}
 			genManifest.App = app
