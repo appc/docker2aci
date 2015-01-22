@@ -154,12 +154,12 @@ func GetRemoteImageJSON(imgID, registry string, repoData *RepoData) ([]byte, int
 		}
 	}
 
-	jsonString, err := ioutil.ReadAll(res.Body)
+	jsonBytes, err := ioutil.ReadAll(res.Body)
 	if err != nil {
-		return nil, -1, fmt.Errorf("Failed to read downloaded json: %v (%s)", err, jsonString)
+		return nil, -1, fmt.Errorf("Failed to read downloaded json: %v (%s)", err, jsonBytes)
 	}
 
-	return jsonString, imageSize, nil
+	return jsonBytes, imageSize, nil
 }
 
 func GetRemoteLayer(imgID, registry string, repoData *RepoData, imgSize int64) (io.ReadCloser, error) {
