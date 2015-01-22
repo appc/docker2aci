@@ -61,6 +61,8 @@ const (
 	Gzip
 )
 
+var flagImport = flag.Bool("import", false, "Import ACI images to the rocket store")
+
 func makeEndpointsList(headers []string) []string {
 	var endpoints []string
 
@@ -247,11 +249,11 @@ func setAuthToken(req *http.Request, token []string) {
 	}
 }
 
-func GenerateManifest(layerData DockerImageData, dockerURL *DockerURL, parentImageID string) (*schema.ImageManifest, error) {
+func GenerateManifest(layerData DockerImageData, dockerURL *DockerURL) (*schema.ImageManifest, error) {
 	dockerConfig := layerData.Config
 	genManifest := &schema.ImageManifest{}
 
-	appURL := dockerURL.IndexURL + "/" + dockerURL.ImageName
+	appURL := dockerURL.IndexURL + "/" + dockerURL.ImageName + "-" + layerData.ID
 	name, err := types.NewACName(appURL)
 	if err != nil {
 		return nil, err
@@ -283,14 +285,16 @@ func GenerateManifest(layerData DockerImageData, dockerURL *DockerURL, parentIma
 		}
 	}
 
-	if parentImageID != "" {
+	if layerData.Parent != "" {
 		var dependencies types.Dependencies
-		hash, err := types.NewHash(parentImageID)
+		parentAppNameString := dockerURL.IndexURL + "/" + dockerURL.ImageName + "-" + layerData.Parent
+
+		parentAppName, err := types.NewACName(parentAppNameString)
 		if err != nil {
 			return nil, err
 		}
 
-		dependencies = append(dependencies, types.Dependency{App: *name, ImageID: hash})
+		dependencies = append(dependencies, types.Dependency{App: *parentAppName})
 		genManifest.Dependencies = dependencies
 	}
 
@@ -422,7 +426,7 @@ func WriteACI(layer io.Reader, manifest []byte, output string) error {
 	return nil
 }
 
-func ImportLayer(layerID string, repoData *RepoData, dockerURL *DockerURL, dataStore *cas.Store, parentImageID string) (string, error) {
+func BuildACI(layerID string, repoData *RepoData, dockerURL *DockerURL) (string, error) {
 	tmpDir, err := ioutil.TempDir("", "docker2aci-")
 	if err != nil {
 		return "", fmt.Errorf("Error creating dir: %v", err)
@@ -452,7 +456,7 @@ func ImportLayer(layerID string, repoData *RepoData, dockerURL *DockerURL, dataS
 	}
 	defer layer.Close()
 
-	manifest, err := GenerateManifest(layerData, dockerURL, parentImageID)
+	manifest, err := GenerateManifest(layerData, dockerURL)
 	if err != nil {
 		return "", fmt.Errorf("Error generating the manifest: %v", err)
 	}
@@ -467,22 +471,26 @@ func ImportLayer(layerID string, repoData *RepoData, dockerURL *DockerURL, dataS
 		return "", fmt.Errorf("Error writing ACI: %v", err)
 	}
 
-	var aciFile *os.File
-	if aciFile, err = os.Open(aciPath); err != nil {
-		return "", err
-	}
-
-	aciReader := bufio.NewReader(aciFile)
-	parentImageID, err = dataStore.WriteACI(aciReader)
-	if err != nil {
-		return "", fmt.Errorf("Error importing ACI to the store: %v", err)
-	}
-	aciFile.Close()
-
-	return parentImageID, nil
+	return aciPath, nil
 }
 
-func runDocker2ACI(arg string) error {
+func ImportACI(aciPath string, dataStore *cas.Store) (string, error) {
+		aciFile, err := os.Open(aciPath)
+		if err != nil {
+			return "", err
+		}
+		defer aciFile.Close()
+
+		aciReader := bufio.NewReader(aciFile)
+		parentImageID, err := dataStore.WriteACI(aciReader)
+		if err != nil {
+			return "", err
+		}
+
+		return parentImageID, nil
+}
+
+func runDocker2ACI(arg string, importACI bool) error {
 	dockerURL := parseArgument(arg)
 
 	repoData, err := GetRepoData(dockerURL.IndexURL, dockerURL.ImageName)
@@ -511,22 +519,28 @@ func runDocker2ACI(arg string) error {
 	}
 
 	var rocketAppImageID string
-	parentImageID := ""
+	rocketAppImageID = "not imported"
 
 	// From base image
-	for i := len(ancestry) - 1; i >= 0; i-- {
+	for i := range(ancestry) {
 		layerID := ancestry[i]
-
-		rocketLayerID, err := ImportLayer(layerID, repoData, dockerURL, ds, parentImageID)
+		aciPath, err := BuildACI(layerID, repoData, dockerURL)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error importing image: %v\n", err)
 			return err
 		}
 
-		if layerID == appImageID {
-			rocketAppImageID = rocketLayerID
+		if importACI {
+			rocketLayerID, err := ImportACI(aciPath, ds)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "Error importing ACI to the store: %v\n", err)
+				return err
+			}
+
+			if layerID == appImageID {
+				rocketAppImageID = rocketLayerID
+			}
 		}
-		parentImageID = rocketLayerID
 	}
 
 	fmt.Println(rocketAppImageID)
@@ -542,7 +556,7 @@ func main() {
 		return
 	}
 
-	if err := runDocker2ACI(args[0]); err != nil {
+	if err := runDocker2ACI(args[0], *flagImport); err != nil {
 		os.Exit(1)
 	}
 }
