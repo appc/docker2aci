@@ -39,6 +39,7 @@ type DockerImageData struct {
 type RepoData struct {
 	Tokens    []string
 	Endpoints []string
+	Cookie    []string
 }
 
 type DockerURL struct {
@@ -106,6 +107,11 @@ func GetRepoData(indexURL string, remote string) (*RepoData, error) {
 		tokens = res.Header["X-Docker-Token"]
 	}
 
+	var cookies []string
+	if res.Header.Get("Set-Cookie") != "" {
+		cookies = res.Header["Set-Cookie"]
+	}
+
 	var endpoints []string
 	if res.Header.Get("X-Docker-Endpoints") != "" {
 		endpoints = makeEndpointsList(res.Header["X-Docker-Endpoints"])
@@ -117,16 +123,18 @@ func GetRepoData(indexURL string, remote string) (*RepoData, error) {
 	return &RepoData{
 		Endpoints: endpoints,
 		Tokens:    tokens,
+		Cookie:    cookies,
 	}, nil
 }
 
-func GetRemoteImageJSON(imgID, registry string, token []string) ([]byte, int, error) {
+func GetRemoteImageJSON(imgID, registry string, repoData *RepoData) ([]byte, int, error) {
 	client := &http.Client{}
 	req, err := http.NewRequest("GET", registry+"images/"+imgID+"/json", nil)
 	if err != nil {
 		return nil, -1, err
 	}
-	setAuthToken(req, token)
+	setAuthToken(req, repoData.Tokens)
+	setCookie(req, repoData.Cookie)
 	res, err := client.Do(req)
 	if err != nil {
 		return nil, -1, err
@@ -154,14 +162,15 @@ func GetRemoteImageJSON(imgID, registry string, token []string) ([]byte, int, er
 	return jsonString, imageSize, nil
 }
 
-func GetRemoteLayer(imgID, registry string, token []string, imgSize int64) (io.ReadCloser, error) {
+func GetRemoteLayer(imgID, registry string, repoData *RepoData, imgSize int64) (io.ReadCloser, error) {
 	client := &http.Client{}
 	req, err := http.NewRequest("GET", registry+"images/"+imgID+"/layer", nil)
 	if err != nil {
 		return nil, err
 	}
 
-	setAuthToken(req, token)
+	setAuthToken(req, repoData.Tokens)
+	setCookie(req, repoData.Cookie)
 
 	fmt.Printf("Downloading layer: %s\n", imgID)
 
@@ -178,14 +187,15 @@ func GetRemoteLayer(imgID, registry string, token []string, imgSize int64) (io.R
 	return res.Body, nil
 }
 
-func GetImageIDFromTag(registry string, appName string, tag string, token []string) (string, error) {
+func GetImageIDFromTag(registry string, appName string, tag string, repoData *RepoData) (string, error) {
 	client := &http.Client{}
 	req, err := http.NewRequest("GET", registry+"repositories/"+appName+"/tags/"+tag, nil)
 	if err != nil {
 		return "", fmt.Errorf("Failed to get Image ID: %s, URL: %s", err, req.URL)
 	}
 
-	setAuthToken(req, token)
+	setAuthToken(req, repoData.Tokens)
+	setCookie(req, repoData.Cookie)
 	res, err := client.Do(req)
 	if err != nil {
 		return "", fmt.Errorf("Failed to get Image ID: %s, URL: %s", err, req.URL)
@@ -211,14 +221,15 @@ func GetImageIDFromTag(registry string, appName string, tag string, token []stri
 	return imageID, nil
 }
 
-func GetAncestry(imgID, registry string, token []string) ([]string, error) {
+func GetAncestry(imgID, registry string, repoData *RepoData) ([]string, error) {
 	client := &http.Client{}
 	req, err := http.NewRequest("GET", registry+"images/"+imgID+"/ancestry", nil)
 	if err != nil {
 		return nil, err
 	}
 
-	setAuthToken(req, token)
+	setAuthToken(req, repoData.Tokens)
+	setCookie(req, repoData.Cookie)
 	res, err := client.Do(req)
 	if err != nil {
 		return nil, err
@@ -246,6 +257,12 @@ func GetAncestry(imgID, registry string, token []string) ([]string, error) {
 func setAuthToken(req *http.Request, token []string) {
 	if req.Header.Get("Authorization") == "" {
 		req.Header.Set("Authorization", "Token "+strings.Join(token, ","))
+	}
+}
+
+func setCookie(req *http.Request, cookie []string) {
+	if req.Header.Get("Cookie") == "" {
+		req.Header.Set("Cookie", strings.Join(cookie, ""))
 	}
 }
 
@@ -453,7 +470,7 @@ func BuildACI(layerID string, repoData *RepoData, dockerURL *DockerURL) (string,
 		return "", fmt.Errorf("Error creating dir: %s", layerRootfs)
 	}
 
-	jsonString, size, err := GetRemoteImageJSON(layerID, repoData.Endpoints[0], repoData.Tokens)
+	jsonString, size, err := GetRemoteImageJSON(layerID, repoData.Endpoints[0], repoData)
 	if err != nil {
 		return "", fmt.Errorf("Error getting image json: %v", err)
 	}
@@ -463,7 +480,7 @@ func BuildACI(layerID string, repoData *RepoData, dockerURL *DockerURL) (string,
 		return "", fmt.Errorf("Error unmarshaling layer data: %v", err)
 	}
 
-	layer, err := GetRemoteLayer(layerID, repoData.Endpoints[0], repoData.Tokens, int64(size))
+	layer, err := GetRemoteLayer(layerID, repoData.Endpoints[0], repoData, int64(size))
 	if err != nil {
 		return "", fmt.Errorf("Error getting the remote layer: %v", err)
 	}
@@ -526,13 +543,13 @@ func runDocker2ACI(arg string, importACI bool) error {
 	}
 
 	// TODO(iaguis) check more endpoints
-	appImageID, err := GetImageIDFromTag(repoData.Endpoints[0], dockerURL.ImageName, dockerURL.Tag, repoData.Tokens)
+	appImageID, err := GetImageIDFromTag(repoData.Endpoints[0], dockerURL.ImageName, dockerURL.Tag, repoData)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error getting ImageID from tag %s: %v\n", dockerURL.Tag, err)
 		return err
 	}
 
-	ancestry, err := GetAncestry(appImageID, repoData.Endpoints[0], repoData.Tokens)
+	ancestry, err := GetAncestry(appImageID, repoData.Endpoints[0], repoData)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error getting ancestry: %v\n", err)
 		return err
