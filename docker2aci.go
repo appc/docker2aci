@@ -600,7 +600,7 @@ func main() {
 	args := flag.Args()
 
 	if len(args) != 1 {
-		fmt.Println("Usage: docker2aci [REGISTRYURL/]IMAGE_NAME[:TAG]")
+		fmt.Println("Usage: docker2aci [--import] [REGISTRYURL/]IMAGE_NAME[:TAG]")
 		return
 	}
 
