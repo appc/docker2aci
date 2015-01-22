@@ -3,6 +3,8 @@ package main
 import (
 	"archive/tar"
 	"bufio"
+	"bytes"
+	"compress/gzip"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -10,17 +12,13 @@ import (
 	"io/ioutil"
 	"net/http"
 	"os"
-	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
 
-	"github.com/appc/spec/aci"
-	"github.com/appc/spec/pkg/tarheader"
 	"github.com/appc/spec/schema"
 	"github.com/appc/spec/schema/types"
 	"github.com/coreos/rocket/cas"
-	"github.com/docker/docker/pkg/archive"
 	"github.com/docker/docker/runconfig"
 )
 
@@ -49,11 +47,18 @@ type DockerURL struct {
 	Tag       string
 }
 
+type Compression int
+
 const (
 	defaultIndex  = "index.docker.io"
 	defaultTag    = "latest"
 	rocketDir     = "/var/lib/rkt"
 	schemaVersion = "0.1.1"
+)
+
+const (
+	Uncompressed Compression = iota
+	Gzip
 )
 
 func makeEndpointsList(headers []string) []string {
@@ -325,119 +330,96 @@ func parseArgument(arg string) *DockerURL {
 	}
 }
 
-// shamelessly copied from actool
-func buildWalker(root string, aw aci.ArchiveWriter) filepath.WalkFunc {
-	// cache of inode -> filepath, used to leverage hard links in the archive
-	inos := map[uint64]string{}
-	return func(path string, info os.FileInfo, err error) error {
-		if err != nil {
-			return err
+func DetectCompression(source []byte) Compression {
+	for compression, m := range map[Compression][]byte{
+		Gzip:  {0x1F, 0x8B, 0x08},
+	} {
+		if len(source) < len(m) {
+			fmt.Fprintf(os.Stderr, "Len too short")
+			continue
 		}
-		relpath, err := filepath.Rel(root, path)
-		if err != nil {
-			return err
+		if bytes.Compare(m, source[:len(m)]) == 0 {
+			return compression
 		}
-		if relpath == "." {
-			return nil
-		}
-		if relpath == aci.ManifestFile {
-			// ignore; this will be written by the archive writer
-			// TODO(jonboulle): does this make sense? maybe just remove from archivewriter?
-			return nil
-		}
+	}
+	return Uncompressed
+}
 
-		link := ""
-		var r io.Reader
-		switch info.Mode() & os.ModeType {
-		case os.ModeCharDevice:
-		case os.ModeDevice:
-		case os.ModeDir:
-		case os.ModeSymlink:
-			target, err := os.Readlink(path)
-			if err != nil {
-				return err
-			}
-			link = target
-		default:
-			file, err := os.Open(path)
-			if err != nil {
-				return err
-			}
-			defer file.Close()
-			r = file
-		}
+func Decompress(layer io.Reader) (io.Reader, error) {
+	bufR := bufio.NewReader(layer)
+	bs, _ := bufR.Peek(10)
 
-		hdr, err := tar.FileInfoHeader(info, link)
+	compression := DetectCompression(bs)
+	switch compression {
+	case Gzip:
+		gz, err := gzip.NewReader(bufR)
 		if err != nil {
-			panic(err)
+			return nil, fmt.Errorf("Error reading layer (gzip): %v", err)
 		}
-		// Because os.FileInfo's Name method returns only the base
-		// name of the file it describes, it may be necessary to
-		// modify the Name field of the returned header to provide the
-		// full path name of the file.
-		hdr.Name = relpath
-		tarheader.Populate(hdr, info, inos)
-		// If the file is a hard link to a file we've already seen, we
-		// don't need the contents
-		if hdr.Typeflag == tar.TypeLink {
-			hdr.Size = 0
-			r = nil
-		}
-		if err := aw.AddFile(relpath, hdr, r); err != nil {
-			return err
-		}
-
-		return nil
+		return gz, nil
+	case Uncompressed:
+		return bufR, nil
+	default:
+		return nil, fmt.Errorf("Unknown layer format")
 	}
 }
 
-func BuildACI(imageID string, outDir string, targetDir string) (string, error) {
-	targetACI := filepath.Join(outDir, imageID+".aci")
-
-	mode := os.O_CREATE | os.O_WRONLY
-	mode |= os.O_TRUNC
-
-	fh, err := os.OpenFile(targetACI, mode, 0644)
+func WriteACI(layer io.Reader, manifest []byte, output string) error {
+	reader, err := Decompress(layer)
 	if err != nil {
-		return "", fmt.Errorf("Unable to open target %s: %v", targetACI, err)
+		return err
 	}
 
-	var r io.WriteCloser = fh
-	tr := tar.NewWriter(r)
-
-	defer func() {
-		tr.Close()
-		fh.Close()
-	}()
-
-	// TODO(jonboulle): stream the validation so we don't have to walk the rootfs twice
-	if err := aci.ValidateLayout(targetDir); err != nil {
-		return "", fmt.Errorf("Layout failed validation: %v", err)
-	}
-	mpath := filepath.Join(targetDir, aci.ManifestFile)
-	b, err := ioutil.ReadFile(mpath)
+	tr := tar.NewReader(reader)
 	if err != nil {
-		return "", fmt.Errorf("Unable to read Image Manifest: %v", err)
-
+		return err
 	}
 
-	var im schema.ImageManifest
-	if err := im.UnmarshalJSON(b); err != nil {
-		return "", fmt.Errorf("Unable to load Image Manifest: %v", err)
-	}
-	iw := aci.NewImageWriter(im, tr)
-
-	err = filepath.Walk(targetDir, buildWalker(targetDir, iw))
+	aciFile, err := os.Create(output)
 	if err != nil {
-		return "", fmt.Errorf("Error walking rootfs: %v", err)
+		return fmt.Errorf("Error creating ACI file: %v", err)
+	}
+	defer aciFile.Close()
+
+	trw := tar.NewWriter(aciFile)
+
+	// Write manifest
+	hdr := &tar.Header{
+		Name: "manifest",
+		Mode: 0600,
+		Size: int64(len(manifest)),
+	}
+	if err := trw.WriteHeader(hdr); err != nil {
+		return err
+	}
+	if _, err := trw.Write(manifest); err != nil {
+		return err
 	}
 
-	err = iw.Close()
-	if err != nil {
-		return "", fmt.Errorf("Unable to close image %s: %v", targetACI, err)
+	// Write files in rootfs/
+	for {
+		hdr, err := tr.Next()
+		if err == io.EOF {
+			// end of tar archive
+			break
+		}
+		if err != nil {
+			return fmt.Errorf("Error reading layer tar entry: %v", err)
+		}
+		hdr.Name = "rootfs/"+hdr.Name
+		if err := trw.WriteHeader(hdr); err != nil {
+			return fmt.Errorf("Error writing header: %v", err)
+		}
+		if _, err := io.Copy(trw, tr); err != nil {
+			return fmt.Errorf("Error copying file into the tar out: %v", err)
+		}
 	}
 
-	return targetACI, nil
+	if err := trw.Close(); err != nil {
+		return fmt.Errorf("Error closing ACI file: %v", err)
+	}
+
+	return nil
 }
 
 func ImportLayer(layerID string, repoData *RepoData, dockerURL *DockerURL, dataStore *cas.Store, parentImageID string) (string, error) {
@@ -470,11 +452,6 @@ func ImportLayer(layerID string, repoData *RepoData, dockerURL *DockerURL, dataS
 	}
 	defer layer.Close()
 
-	err = archive.Untar(layer, layerRootfs, &archive.TarOptions{NoLchown: true})
-	if err != nil {
-		return "", fmt.Errorf("Error untaring image: %v", err)
-	}
-
 	manifest, err := GenerateManifest(layerData, dockerURL, parentImageID)
 	if err != nil {
 		return "", fmt.Errorf("Error generating the manifest: %v", err)
@@ -485,34 +462,20 @@ func ImportLayer(layerID string, repoData *RepoData, dockerURL *DockerURL, dataS
 		return "", err
 	}
 
-	f, err := os.Create(filepath.Join(layerDest, aci.ManifestFile))
-	if err != nil {
-		return "", fmt.Errorf("Error creating manifest file: %v", err)
-	}
-	defer f.Close()
-
-	f.Write(manifestBytes)
-	f.Sync()
-
-	currentDir, err := os.Getwd()
-	if err != nil {
-		return "", err
-	}
-
-	aciPath, err := BuildACI(layerID, currentDir, layerDest)
-	if err != nil {
-		return "", fmt.Errorf("Error building ACI: %v", err)
+	aciPath := layerID + ".aci"
+	if err := WriteACI(layer, manifestBytes, aciPath); err != nil {
+		return "", fmt.Errorf("Error writing ACI: %v", err)
 	}
 
 	var aciFile *os.File
 	if aciFile, err = os.Open(aciPath); err != nil {
-		return "", fmt.Errorf("Error opening target aci file")
+		return "", err
 	}
 
 	aciReader := bufio.NewReader(aciFile)
 	parentImageID, err = dataStore.WriteACI(aciReader)
 	if err != nil {
-		return "", fmt.Errorf("Error writing ACI: %v", err)
+		return "", fmt.Errorf("Error importing ACI to the store: %v", err)
 	}
 	aciFile.Close()
 
