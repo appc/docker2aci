@@ -483,6 +483,9 @@ func writeACI(layer io.Reader, manifest *schema.ImageManifest, output string) er
 			continue
 		}
 		hdr.Name = "rootfs/" + hdr.Name
+		if hdr.Typeflag == tar.TypeLink {
+			hdr.Linkname = "rootfs/" + hdr.Linkname
+		}
 		if err := trw.WriteHeader(hdr); err != nil {
 			return fmt.Errorf("Error writing header: %v", err)
 		}
