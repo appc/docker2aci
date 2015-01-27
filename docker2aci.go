@@ -266,6 +266,20 @@ func setCookie(req *http.Request, cookie []string) {
 	}
 }
 
+func parseDockerUser(dockerUser string) (string, string) {
+	if dockerUser == "" {
+		return "0", "0"
+	}
+
+	dockerUserParts := strings.Split(dockerUser, ":")
+
+	if len(dockerUserParts) < 2 {
+		return dockerUserParts[0], "0"
+	}
+
+	return dockerUserParts[0], dockerUserParts[1]
+}
+
 func GenerateManifest(layerData DockerImageData, dockerURL *DockerURL) (*schema.ImageManifest, error) {
 	dockerConfig := layerData.Config
 	genManifest := &schema.ImageManifest{}
@@ -314,7 +328,8 @@ func GenerateManifest(layerData DockerImageData, dockerURL *DockerURL) (*schema.
 		}
 		if exec != nil {
 			// TODO(iaguis) populate user and group
-			app := &types.App{Exec: exec, User: "0", Group: "0"}
+			user, group := parseDockerUser(dockerConfig.User)
+			app := &types.App{Exec: exec, User: user, Group: group}
 			genManifest.App = app
 		}
 	}
