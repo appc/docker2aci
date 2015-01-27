@@ -445,6 +445,9 @@ func WriteACI(layer io.Reader, manifest []byte, output string) error {
 		if err != nil {
 			return fmt.Errorf("Error reading layer tar entry: %v", err)
 		}
+		if hdr.Name == "./" {
+			continue
+		}
 		hdr.Name = "rootfs/"+hdr.Name
 		if err := trw.WriteHeader(hdr); err != nil {
 			return fmt.Errorf("Error writing header: %v", err)
