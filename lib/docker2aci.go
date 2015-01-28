@@ -4,6 +4,7 @@ package docker2aci
 
 import (
 	"archive/tar"
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -46,6 +47,12 @@ type DockerURL struct {
 	Tag       string
 }
 
+type SquashAcc struct {
+	OutWriter *tar.Writer
+	Manifests []schema.ImageManifest
+	Filelist  []string
+}
+
 const (
 	defaultIndex  = "index.docker.io"
 	defaultTag    = "latest"
@@ -58,11 +65,14 @@ const (
 
 		{docker registry URL}/{image name}:{tag}
 	
-	It then gets all the layers of the requested image, converts each of them
-	to ACI and places the resulting files in outputDir.
+	It then gets all the layers of the requested image and converts each of
+	them to ACI.
+	If the squash flag is true, it squashes all the layers in one file and
+	places this file in outputDir; if it is false, it places every layer in its
+	own ACI in outputDir.
 	It returns the list of generated ACI paths.
 */
-func Convert(dockerURL string, outputDir string) ([]string, error) {
+func Convert(dockerURL string, squash bool, outputDir string) ([]string, error) {
 	parsedURL := parseDockerURL(dockerURL)
 
 	repoData, err := getRepoData(parsedURL.IndexURL, parsedURL.ImageName)
@@ -84,15 +94,38 @@ func Convert(dockerURL string, outputDir string) ([]string, error) {
 		return nil, err
 	}
 
+	layersOutputDir := "."
+	if squash {
+		layersOutputDir, err = ioutil.TempDir("", "docker2aci-")
+		if err != nil {
+			return nil, fmt.Errorf("Error creating dir: %v", err)
+		}
+		defer os.RemoveAll(layersOutputDir)
+	}
+
 	var aciLayerPaths []string
 	for _, layerID := range ancestry {
-		aciPath, err := buildACI(layerID, repoData, parsedURL, outputDir)
+		aciPath, err := buildACI(layerID, repoData, parsedURL, layersOutputDir)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error building layer: %v\n", err)
 			return nil, err
 		}
 
 		aciLayerPaths = append(aciLayerPaths, aciPath)
+	}
+
+	if squash {
+		squashedFilename := strings.Replace(parsedURL.ImageName, "/", "-", -1)
+		if parsedURL.Tag != "" {
+			squashedFilename += "-" + parsedURL.Tag
+		}
+		squashedFilename += ".aci"
+		squashedImagePath := path.Join(outputDir, squashedFilename)
+
+		if err := squashLayers(aciLayerPaths, squashedImagePath); err != nil {
+			fmt.Fprintf(os.Stderr, "Error squashing image: %v\n", err)
+		}
+		aciLayerPaths = []string{squashedImagePath}
 	}
 
 	return aciLayerPaths, nil
@@ -511,6 +544,144 @@ func writeACI(layer io.Reader, manifest *schema.ImageManifest, output string) er
 	}
 
 	return nil
+}
+
+func squashLayers(layers []string, squashedImagePath string) error {
+	squashedImageFile, err := os.Create(squashedImagePath)
+	if err != nil {
+		return err
+	}
+	defer squashedImageFile.Close()
+
+	squashAcc := new(SquashAcc)
+	squashAcc.OutWriter = tar.NewWriter(squashedImageFile)
+	for _, aciPath := range layers {
+		squashAcc, err = reduceACIs(squashAcc, aciPath)
+		if err != nil {
+			return err
+		}
+	}
+
+	finalManifest := mergeManifests(squashAcc.Manifests)
+
+	finalManifestBytes, err := json.Marshal(finalManifest)
+	if err != nil {
+		return err
+	}
+
+	// Write manifest
+	hdr := &tar.Header{
+		Name: "manifest",
+		Mode: 0600,
+		Size: int64(len(finalManifestBytes)),
+	}
+	if err := squashAcc.OutWriter.WriteHeader(hdr); err != nil {
+		return err
+	}
+	if _, err := squashAcc.OutWriter.Write(finalManifestBytes); err != nil {
+		return err
+	}
+
+	squashAcc.OutWriter.Close()
+
+	return nil
+}
+
+func reduceACIs(squashAcc *SquashAcc, currentPath string) (*SquashAcc, error) {
+	currentFile, err := os.Open(currentPath)
+	if err != nil {
+		return nil, err
+	}
+	defer currentFile.Close()
+
+	_, manCurBuf, err := getFileInTar("manifest", currentFile)
+	if err != nil {
+		return nil, err
+	}
+
+	manCurBytes := manCurBuf.Bytes()
+
+	manifestCur := schema.ImageManifest{}
+	err = json.Unmarshal(manCurBytes, &manifestCur)
+	if err != nil {
+		return nil, err
+	}
+
+	squashAcc.Manifests = append(squashAcc.Manifests, manifestCur)
+
+	tr := tar.NewReader(currentFile)
+	for {
+		hdr, err := tr.Next()
+		if err == io.EOF {
+			// end of tar archive
+			break
+		}
+		if err != nil {
+			return nil, fmt.Errorf("Error reading layer tar entry: %v", err)
+		}
+
+		if hdr.Name == "manifest" {
+			continue
+		}
+
+		if !in(squashAcc.Filelist, hdr.Name) {
+			squashAcc.Filelist = append(squashAcc.Filelist, hdr.Name)
+
+			if err := squashAcc.OutWriter.WriteHeader(hdr); err != nil {
+				return nil, fmt.Errorf("Error writing header: %v", err)
+			}
+			if _, err := io.Copy(squashAcc.OutWriter, tr); err != nil {
+				return nil, fmt.Errorf("Error copying file into the tar out: %v", err)
+			}
+		}
+	}
+
+	return squashAcc, nil
+}
+
+func getFileInTar(fileName string, tarFile *os.File) (*tar.Header, *bytes.Buffer, error) {
+	defer func() {
+		tarFile.Seek(0, 0)
+	}()
+
+	tr := tar.NewReader(tarFile)
+
+	for {
+		hdr, err := tr.Next()
+		if err == io.EOF {
+			// end of tar archive
+			break
+		}
+		if err != nil {
+			return nil, nil, err
+		}
+
+		if hdr.Name == fileName {
+			var buffer = new(bytes.Buffer)
+			_, err := buffer.ReadFrom(tr)
+			if err != nil {
+				return nil, nil, err
+			}
+
+			return hdr, buffer, nil
+		}
+	}
+
+	return nil, nil, nil
+}
+
+func in(list []string, el string) bool {
+	for _, x := range list {
+		if el == x {
+			return true
+		}
+	}
+	return false
+}
+
+func mergeManifests(manifests []schema.ImageManifest) *schema.ImageManifest {
+	// TODO implement me
+	return &manifests[0]
 }
 
 func setAuthToken(req *http.Request, token []string) {

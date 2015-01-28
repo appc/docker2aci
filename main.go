@@ -14,10 +14,15 @@ const (
 	rocketDir = "/var/lib/rkt"
 )
 
-var flagImport = flag.Bool("import", false, "Import ACI images to the rocket store")
+var (
+	flagImport = flag.Bool("import", false, "Import ACI images to the rocket store")
+	flagNoSquash = flag.Bool("nosquash", false, "Don't Squash layers and output every layer as ACI")
+)
 
-func runDocker2ACI(arg string, flagImport bool) error {
-	aciLayerPaths, err := docker2aci.Convert(arg, ".")
+func runDocker2ACI(arg string, flagImport bool, flagNoSquash bool) error {
+	squash := !flagNoSquash
+
+	aciLayerPaths, err := docker2aci.Convert(arg, squash, ".")
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Conversion error: %v\n", err)
 		return err
@@ -78,11 +83,11 @@ func main() {
 	args := flag.Args()
 
 	if len(args) != 1 {
-		fmt.Println("Usage: docker2aci [--import] [REGISTRYURL/]IMAGE_NAME[:TAG]")
+		fmt.Println("Usage: docker2aci [--import] [--nosquash] [REGISTRYURL/]IMAGE_NAME[:TAG]")
 		return
 	}
 
-	if err := runDocker2ACI(args[0], *flagImport); err != nil {
+	if err := runDocker2ACI(args[0], *flagImport, *flagNoSquash); err != nil {
 		os.Exit(1)
 	}
 }
