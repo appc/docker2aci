@@ -1,3 +1,5 @@
+// Package docker2aci plements a simple library for converting docker images to
+// App Container Images (ACIs).
 package docker2aci
 
 import (
@@ -50,6 +52,16 @@ const (
 	schemaVersion = "0.1.1"
 )
 
+/*
+	Convert generates ACI images from docker registry URLs.
+	It takes as input a dockerURL of the form:
+
+		{docker registry URL}/{image name}:{tag}
+	
+	It then gets all the layers of the requested image, converts each of them
+	to ACI and places the resulting files in outputDir.
+	It returns the list of generated ACI paths.
+*/
 func Convert(dockerURL string, outputDir string) ([]string, error) {
 	parsedURL := parseDockerURL(dockerURL)
 
