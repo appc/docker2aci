@@ -452,7 +452,6 @@ func generateManifest(layerData DockerImageData, dockerURL *DockerURL) (*schema.
 			exec = types.Exec(dockerConfig.Entrypoint)
 		}
 		if exec != nil {
-			// TODO(iaguis) populate user and group
 			user, group := parseDockerUser(dockerConfig.User)
 			app := &types.App{Exec: exec, User: user, Group: group}
 			genManifest.App = app
