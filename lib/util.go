@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path"
 	"strings"
 )
 
@@ -26,7 +27,7 @@ func makeEndpointsList(headers []string) []string {
 			endpoints = append(
 				endpoints,
 				// TODO(iaguis) discover if httpsOrHTTP
-				fmt.Sprintf("https://%s/v1/", strings.TrimSpace(endpointEl)))
+				path.Join(strings.TrimSpace(endpointEl), "v1"))
 		}
 	}
 
