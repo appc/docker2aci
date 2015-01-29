@@ -592,7 +592,9 @@ func reduceACIs(squashAcc *SquashAcc, currentPath string) (*SquashAcc, error) {
 	if err != nil {
 		return nil, err
 	}
-	currentFile.Seek(0, os.SEEK_SET)
+	if _, err := currentFile.Seek(0, os.SEEK_SET); err != nil {
+		return nil, err
+	}
 
 	squashAcc.Manifests = append(squashAcc.Manifests, *manifestCur)
 
