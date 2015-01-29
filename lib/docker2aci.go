@@ -556,6 +556,7 @@ func squashLayers(layers []string, squashedImagePath string) error {
 			return err
 		}
 	}
+	defer squashAcc.OutWriter.Close()
 
 	finalManifest := mergeManifests(squashAcc.Manifests)
 
@@ -576,8 +577,6 @@ func squashLayers(layers []string, squashedImagePath string) error {
 	if _, err := squashAcc.OutWriter.Write(finalManifestBytes); err != nil {
 		return err
 	}
-
-	squashAcc.OutWriter.Close()
 
 	return nil
 }
