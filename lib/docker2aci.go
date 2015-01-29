@@ -140,7 +140,7 @@ func parseDockerURL(arg string) *DockerURL {
 			indexURL = argParts[0]
 			appString = argParts[1]
 		} else {
-			appString = strings.Join(argParts, "/")
+			appString = path.Join(argParts...)
 		}
 	} else {
 		appString = argParts[0]
