@@ -1,4 +1,4 @@
-// Package docker2aci plements a simple library for converting docker images to
+// Package docker2aci implements a simple library for converting docker images to
 // App Container Images (ACIs).
 package docker2aci
 
