@@ -465,12 +465,16 @@ func generateManifest(layerData DockerImageData, dockerURL *DockerURL) (*schema.
 }
 
 func parseDockerUser(dockerUser string) (string, string) {
+	// if the docker user is empty assume root user and group
 	if dockerUser == "" {
 		return "0", "0"
 	}
 
 	dockerUserParts := strings.Split(dockerUser, ":")
 
+	// when only the user is given, the docker spec says that the default and
+	// supplementary groups of the user in /etc/passwd should be applied.
+	// Assume root group for now in this case.
 	if len(dockerUserParts) < 2 {
 		return dockerUserParts[0], "0"
 	}
