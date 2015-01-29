@@ -306,6 +306,18 @@ func buildACI(layerID string, repoData *RepoData, dockerURL *DockerURL, outputDi
 	}
 	defer layer.Close()
 
+	layerFile, err := ioutil.TempFile(tmpDir, "dockerlayer-")
+	if err != nil {
+		return "", fmt.Errorf("Error creating layer: %v", err)
+	}
+
+	_, err = io.Copy(layerFile, layer)
+	if err != nil {
+		return "", fmt.Errorf("Error getting layer: %v", err)
+	}
+
+	layerFile.Sync()
+
 	manifest, err := generateManifest(layerData, dockerURL)
 	if err != nil {
 		return "", fmt.Errorf("Error generating the manifest: %v", err)
@@ -326,7 +338,7 @@ func buildACI(layerID string, repoData *RepoData, dockerURL *DockerURL, outputDi
 
 	aciPath = path.Join(outputDir, aciPath)
 
-	if err := writeACI(layer, manifest, aciPath); err != nil {
+	if err := writeACI(layerFile, *manifest, aciPath); err != nil {
 		return "", fmt.Errorf("Error writing ACI: %v", err)
 	}
 
@@ -482,13 +494,11 @@ func parseDockerUser(dockerUser string) (string, string) {
 	return dockerUserParts[0], dockerUserParts[1]
 }
 
-func writeACI(layer io.Reader, manifest *schema.ImageManifest, output string) error {
-	reader, err := decompress(layer)
+func writeACI(layer io.ReadSeeker, manifest schema.ImageManifest, output string) error {
+	reader, err := aci.NewCompressedTarReader(layer)
 	if err != nil {
 		return err
 	}
-
-	tr := tar.NewReader(reader)
 
 	aciFile, err := os.Create(output)
 	if err != nil {
@@ -498,27 +508,12 @@ func writeACI(layer io.Reader, manifest *schema.ImageManifest, output string) er
 
 	trw := tar.NewWriter(aciFile)
 
-	manifestBytes, err := json.Marshal(manifest)
-	if err != nil {
-		return err
-	}
-
-	// Write manifest
-	hdr := &tar.Header{
-		Name: "manifest",
-		Mode: 0600,
-		Size: int64(len(manifestBytes)),
-	}
-	if err := trw.WriteHeader(hdr); err != nil {
-		return err
-	}
-	if _, err := trw.Write(manifestBytes); err != nil {
-		return err
-	}
+	archiveWriter := aci.NewImageWriter(manifest, trw)
+	defer archiveWriter.Close()
 
 	// Write files in rootfs/
 	for {
-		hdr, err := tr.Next()
+		hdr, err := reader.Next()
 		if err == io.EOF {
 			// end of tar archive
 			break
@@ -529,20 +524,19 @@ func writeACI(layer io.Reader, manifest *schema.ImageManifest, output string) er
 		if hdr.Name == "./" {
 			continue
 		}
+		// FIXME(iaguis) although unlikely, a file named like "/what.wh.ever should be legal
+		if strings.Index(hdr.Name, ".wh.") != -1 {
+			continue
+		}
 		hdr.Name = "rootfs/" + hdr.Name
 		if hdr.Typeflag == tar.TypeLink {
 			hdr.Linkname = "rootfs/" + hdr.Linkname
 		}
-		if err := trw.WriteHeader(hdr); err != nil {
-			return fmt.Errorf("Error writing header: %v", err)
-		}
-		if _, err := io.Copy(trw, tr); err != nil {
-			return fmt.Errorf("Error copying file into the tar out: %v", err)
-		}
-	}
 
-	if err := trw.Close(); err != nil {
-		return fmt.Errorf("Error closing ACI file: %v", err)
+		err = archiveWriter.AddFile(hdr, reader)
+		if err != nil {
+			return fmt.Errorf("Error adding file to ACI: %v", err)
+		}
 	}
 
 	return nil
@@ -600,12 +594,16 @@ func reduceACIs(squashAcc *SquashAcc, currentPath string) (*SquashAcc, error) {
 	if err != nil {
 		return nil, err
 	}
+	currentFile.Seek(0, os.SEEK_SET)
 
 	squashAcc.Manifests = append(squashAcc.Manifests, *manifestCur)
 
-	tr := tar.NewReader(currentFile)
+	reader, err := aci.NewCompressedTarReader(currentFile)
+	if err != nil {
+		return nil, err
+	}
 	for {
-		hdr, err := tr.Next()
+		hdr, err := reader.Next()
 		if err == io.EOF {
 			// end of tar archive
 			break
@@ -626,7 +624,7 @@ func reduceACIs(squashAcc *SquashAcc, currentPath string) (*SquashAcc, error) {
 			if err := squashAcc.OutWriter.WriteHeader(hdr); err != nil {
 				return nil, fmt.Errorf("Error writing header: %v", err)
 			}
-			if _, err := io.Copy(squashAcc.OutWriter, tr); err != nil {
+			if _, err := io.Copy(squashAcc.OutWriter, reader); err != nil {
 				return nil, fmt.Errorf("Error copying file into the tar out: %v", err)
 			}
 		}
