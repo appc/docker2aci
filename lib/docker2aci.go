@@ -565,7 +565,7 @@ func squashLayers(layers []string, squashedImagePath string) error {
 		return err
 	}
 
-	// Write manifest
+	// Write final manifest
 	hdr := &tar.Header{
 		Name: "manifest",
 		Mode: 0600,
