@@ -640,9 +640,24 @@ func in(list []string, el string) bool {
 	return false
 }
 
-func mergeManifests(manifests []schema.ImageManifest) *schema.ImageManifest {
-	// TODO implement me
-	return &manifests[0]
+func mergeManifests(manifests []schema.ImageManifest) schema.ImageManifest {
+	// FIXME(iaguis) we take last layer's manifest as the final manifest for now
+	manifest := manifests[0]
+
+	manifest.Dependencies = nil
+
+	layerIndex := -1
+	for i, l := range(manifest.Labels) {
+		if l.Name.String() == "layer" {
+			layerIndex = i
+		}
+	}
+
+	if layerIndex != -1 {
+		manifest.Labels = append(manifest.Labels[:layerIndex], manifest.Labels[layerIndex+1:]...)
+	}
+
+	return manifest
 }
 
 func setAuthToken(req *http.Request, token []string) {
