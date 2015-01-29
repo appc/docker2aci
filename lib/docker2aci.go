@@ -77,7 +77,7 @@ func Convert(dockerURL string, squash bool, outputDir string) ([]string, error) 
 
 	repoData, err := getRepoData(parsedURL.IndexURL, parsedURL.ImageName)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error getting image data: %v\n", err)
+		fmt.Fprintf(os.Stderr, "Error getting repository data: %v\n", err)
 		return nil, err
 	}
 
