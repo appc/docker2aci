@@ -59,19 +59,17 @@ const (
 	schemaVersion = "0.1.1"
 )
 
-/*
-	Convert generates ACI images from docker registry URLs.
-	It takes as input a dockerURL of the form:
-
-		{docker registry URL}/{image name}:{tag}
-	
-	It then gets all the layers of the requested image and converts each of
-	them to ACI.
-	If the squash flag is true, it squashes all the layers in one file and
-	places this file in outputDir; if it is false, it places every layer in its
-	own ACI in outputDir.
-	It returns the list of generated ACI paths.
-*/
+// Convert generates ACI images from docker registry URLs.
+// It takes as input a dockerURL of the form:
+//
+// 	{docker registry URL}/{image name}:{tag}
+//
+// It then gets all the layers of the requested image and converts each of
+// them to ACI.
+// If the squash flag is true, it squashes all the layers in one file and
+// places this file in outputDir; if it is false, it places every layer in its
+// own ACI in outputDir.
+// It returns the list of generated ACI paths.
 func Convert(dockerURL string, squash bool, outputDir string) ([]string, error) {
 	parsedURL := parseDockerURL(dockerURL)
 
