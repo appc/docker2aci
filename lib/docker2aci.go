@@ -616,10 +616,8 @@ func reduceACIs(squashAcc *SquashAcc, currentPath string) (*SquashAcc, error) {
 			continue
 		}
 
-		sanitizedName := stripTrailingSlashes(hdr.Name)
-
-		if !in(squashAcc.Filelist, sanitizedName) {
-			squashAcc.Filelist = append(squashAcc.Filelist, sanitizedName)
+		if !in(squashAcc.Filelist, hdr.Name) {
+			squashAcc.Filelist = append(squashAcc.Filelist, hdr.Name)
 
 			if err := squashAcc.OutWriter.WriteHeader(hdr); err != nil {
 				return nil, fmt.Errorf("Error writing header: %v", err)
@@ -631,14 +629,6 @@ func reduceACIs(squashAcc *SquashAcc, currentPath string) (*SquashAcc, error) {
 	}
 
 	return squashAcc, nil
-}
-
-func stripTrailingSlashes(str string) string {
-	for len(str) > 0 && str[len(str)-1] == '/' {
-		str = str[0 : len(str)-1]
-	}
-
-	return str
 }
 
 func in(list []string, el string) bool {
