@@ -4,7 +4,6 @@ package docker2aci
 
 import (
 	"archive/tar"
-	"bytes"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -16,6 +15,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/appc/spec/aci"
 	"github.com/appc/spec/schema"
 	"github.com/appc/spec/schema/types"
 	"github.com/docker/docker/runconfig"
@@ -594,20 +594,12 @@ func reduceACIs(squashAcc *SquashAcc, currentPath string) (*SquashAcc, error) {
 	}
 	defer currentFile.Close()
 
-	_, manCurBuf, err := getFileInTar("manifest", currentFile)
+	manifestCur, err := aci.ManifestFromImage(currentFile)
 	if err != nil {
 		return nil, err
 	}
 
-	manCurBytes := manCurBuf.Bytes()
-
-	manifestCur := schema.ImageManifest{}
-	err = json.Unmarshal(manCurBytes, &manifestCur)
-	if err != nil {
-		return nil, err
-	}
-
-	squashAcc.Manifests = append(squashAcc.Manifests, manifestCur)
+	squashAcc.Manifests = append(squashAcc.Manifests, *manifestCur)
 
 	tr := tar.NewReader(currentFile)
 	for {
@@ -647,37 +639,6 @@ func stripTrailingSlashes(str string) string {
 	}
 
 	return str
-}
-
-func getFileInTar(fileName string, tarFile *os.File) (*tar.Header, *bytes.Buffer, error) {
-	defer func() {
-		tarFile.Seek(0, 0)
-	}()
-
-	tr := tar.NewReader(tarFile)
-
-	for {
-		hdr, err := tr.Next()
-		if err == io.EOF {
-			// end of tar archive
-			break
-		}
-		if err != nil {
-			return nil, nil, err
-		}
-
-		if hdr.Name == fileName {
-			var buffer = new(bytes.Buffer)
-			_, err := buffer.ReadFrom(tr)
-			if err != nil {
-				return nil, nil, err
-			}
-
-			return hdr, buffer, nil
-		}
-	}
-
-	return nil, nil, nil
 }
 
 func in(list []string, el string) bool {
