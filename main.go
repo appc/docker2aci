@@ -15,7 +15,7 @@ const (
 )
 
 var (
-	flagImport = flag.Bool("import", false, "Import ACI images to the rocket store")
+	flagImport   = flag.Bool("import", false, "Import ACI images to the rocket store")
 	flagNoSquash = flag.Bool("nosquash", false, "Don't Squash layers and output every layer as ACI")
 )
 

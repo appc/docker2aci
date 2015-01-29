@@ -211,7 +211,7 @@ func getRepoData(indexURL string, remote string) (*RepoData, error) {
 
 func getImageIDFromTag(registry string, appName string, tag string, repoData *RepoData) (string, error) {
 	client := &http.Client{}
-	req, err := http.NewRequest("GET", "https://" + path.Join(registry, "repositories", appName, "tags", tag), nil)
+	req, err := http.NewRequest("GET", "https://"+path.Join(registry, "repositories", appName, "tags", tag), nil)
 	if err != nil {
 		return "", fmt.Errorf("Failed to get Image ID: %s, URL: %s", err, req.URL)
 	}
@@ -245,7 +245,7 @@ func getImageIDFromTag(registry string, appName string, tag string, repoData *Re
 
 func getAncestry(imgID, registry string, repoData *RepoData) ([]string, error) {
 	client := &http.Client{}
-	req, err := http.NewRequest("GET", "https://" + path.Join(registry, "images", imgID, "ancestry"), nil)
+	req, err := http.NewRequest("GET", "https://"+path.Join(registry, "images", imgID, "ancestry"), nil)
 	if err != nil {
 		return nil, err
 	}
@@ -347,7 +347,7 @@ func buildACI(layerID string, repoData *RepoData, dockerURL *DockerURL, outputDi
 
 func getRemoteImageJSON(imgID, registry string, repoData *RepoData) ([]byte, int, error) {
 	client := &http.Client{}
-	req, err := http.NewRequest("GET", "https://" + path.Join(registry, "images", imgID, "json"), nil)
+	req, err := http.NewRequest("GET", "https://"+path.Join(registry, "images", imgID, "json"), nil)
 	if err != nil {
 		return nil, -1, err
 	}
@@ -382,7 +382,7 @@ func getRemoteImageJSON(imgID, registry string, repoData *RepoData) ([]byte, int
 
 func getRemoteLayer(imgID, registry string, repoData *RepoData, imgSize int64) (io.ReadCloser, error) {
 	client := &http.Client{}
-	req, err := http.NewRequest("GET", "https://" + path.Join(registry, "images", imgID, "layer"), nil)
+	req, err := http.NewRequest("GET", "https://"+path.Join(registry, "images", imgID, "layer"), nil)
 	if err != nil {
 		return nil, err
 	}
@@ -647,7 +647,7 @@ func mergeManifests(manifests []schema.ImageManifest) schema.ImageManifest {
 	manifest.Dependencies = nil
 
 	layerIndex := -1
-	for i, l := range(manifest.Labels) {
+	for i, l := range manifest.Labels {
 		if l.Name.String() == "layer" {
 			layerIndex = i
 		}
