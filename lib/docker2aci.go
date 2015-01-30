@@ -513,8 +513,7 @@ func writeACI(layer io.ReadSeeker, manifest schema.ImageManifest, output string)
 		if hdr.Name == "./" {
 			continue
 		}
-		// FIXME(iaguis) although unlikely, a file named like "/what.wh.ever should be legal
-		if strings.Contains(hdr.Name, ".wh.") {
+		if strings.HasPrefix(path.Base(hdr.Name), ".wh.") {
 			continue
 		}
 		hdr.Name = "rootfs/" + hdr.Name
