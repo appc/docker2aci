@@ -51,7 +51,7 @@ type DockerURL struct {
 }
 
 type SquashAccumulator struct {
-	OutWriter *tar.Writer
+	*tar.Writer
 	Manifests []schema.ImageManifest
 	Filelist  []string
 }
@@ -538,15 +538,18 @@ func squashLayers(layers []string, squashedImagePath string) error {
 	}
 	defer squashedImageFile.Close()
 
-	squashAcc := new(SquashAccumulator)
-	squashAcc.OutWriter = tar.NewWriter(squashedImageFile)
+	squashAcc := &SquashAccumulator{
+		tar.NewWriter(squashedImageFile),
+		[]schema.ImageManifest{},
+		[]string{},
+	}
 	for _, aciPath := range layers {
 		squashAcc, err = reduceACIs(squashAcc, aciPath)
 		if err != nil {
 			return err
 		}
 	}
-	defer squashAcc.OutWriter.Close()
+	defer squashAcc.Close()
 
 	finalManifest := mergeManifests(squashAcc.Manifests)
 
@@ -561,10 +564,10 @@ func squashLayers(layers []string, squashedImagePath string) error {
 		Mode: 0600,
 		Size: int64(len(b)),
 	}
-	if err := squashAcc.OutWriter.WriteHeader(hdr); err != nil {
+	if err := squashAcc.WriteHeader(hdr); err != nil {
 		return err
 	}
-	if _, err := squashAcc.OutWriter.Write(b); err != nil {
+	if _, err := squashAcc.Write(b); err != nil {
 		return err
 	}
 
@@ -609,10 +612,10 @@ func reduceACIs(squashAcc *SquashAccumulator, currentPath string) (*SquashAccumu
 		if !in(squashAcc.Filelist, hdr.Name) {
 			squashAcc.Filelist = append(squashAcc.Filelist, hdr.Name)
 
-			if err := squashAcc.OutWriter.WriteHeader(hdr); err != nil {
+			if err := squashAcc.WriteHeader(hdr); err != nil {
 				return nil, fmt.Errorf("Error writing header: %v", err)
 			}
-			if _, err := io.Copy(squashAcc.OutWriter, reader); err != nil {
+			if _, err := io.Copy(squashAcc, reader); err != nil {
 				return nil, fmt.Errorf("Error copying file into the tar out: %v", err)
 			}
 		}
