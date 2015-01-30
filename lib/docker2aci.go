@@ -76,21 +76,18 @@ func Convert(dockerURL string, squash bool, outputDir string) ([]string, error) 
 
 	repoData, err := getRepoData(parsedURL.IndexURL, parsedURL.ImageName)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error getting repository data: %v\n", err)
-		return nil, err
+		return nil, fmt.Errorf("Error getting repository data: %v\n", err)
 	}
 
 	// TODO(iaguis) check more endpoints
 	appImageID, err := getImageIDFromTag(repoData.Endpoints[0], parsedURL.ImageName, parsedURL.Tag, repoData)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error getting ImageID from tag %s: %v\n", parsedURL.Tag, err)
-		return nil, err
+		return nil, fmt.Errorf("Error getting ImageID from tag %s: %v\n", parsedURL.Tag, err)
 	}
 
 	ancestry, err := getAncestry(appImageID, repoData.Endpoints[0], repoData)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error getting ancestry: %v\n", err)
-		return nil, err
+		return nil, fmt.Errorf("Error getting ancestry: %v\n", err)
 	}
 
 	layersOutputDir := "."
@@ -106,8 +103,7 @@ func Convert(dockerURL string, squash bool, outputDir string) ([]string, error) 
 	for _, layerID := range ancestry {
 		aciPath, err := buildACI(layerID, repoData, parsedURL, layersOutputDir)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error building layer: %v\n", err)
-			return nil, err
+			return nil, fmt.Errorf("Error building layer: %v\n", err)
 		}
 
 		aciLayerPaths = append(aciLayerPaths, aciPath)
@@ -122,7 +118,7 @@ func Convert(dockerURL string, squash bool, outputDir string) ([]string, error) 
 		squashedImagePath := path.Join(outputDir, squashedFilename)
 
 		if err := squashLayers(aciLayerPaths, squashedImagePath); err != nil {
-			fmt.Fprintf(os.Stderr, "Error squashing image: %v\n", err)
+			return nil, fmt.Errorf("Error squashing image: %v\n", err)
 		}
 		aciLayerPaths = []string{squashedImagePath}
 	}
