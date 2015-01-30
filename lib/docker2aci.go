@@ -81,25 +81,25 @@ func Convert(dockerURL string, squash bool, outputDir string) ([]string, error) 
 
 	repoData, err := getRepoData(parsedURL.IndexURL, parsedURL.ImageName)
 	if err != nil {
-		return nil, fmt.Errorf("Error getting repository data: %v\n", err)
+		return nil, fmt.Errorf("error getting repository data: %v\n", err)
 	}
 
 	// TODO(iaguis) check more endpoints
 	appImageID, err := getImageIDFromTag(repoData.Endpoints[0], parsedURL.ImageName, parsedURL.Tag, repoData)
 	if err != nil {
-		return nil, fmt.Errorf("Error getting ImageID from tag %s: %v\n", parsedURL.Tag, err)
+		return nil, fmt.Errorf("error getting ImageID from tag %s: %v\n", parsedURL.Tag, err)
 	}
 
 	ancestry, err := getAncestry(appImageID, repoData.Endpoints[0], repoData)
 	if err != nil {
-		return nil, fmt.Errorf("Error getting ancestry: %v\n", err)
+		return nil, fmt.Errorf("error getting ancestry: %v\n", err)
 	}
 
 	layersOutputDir := outputDir
 	if squash {
 		layersOutputDir, err = ioutil.TempDir("", "docker2aci-")
 		if err != nil {
-			return nil, fmt.Errorf("Error creating dir: %v", err)
+			return nil, fmt.Errorf("error creating dir: %v", err)
 		}
 		defer os.RemoveAll(layersOutputDir)
 	}
@@ -108,7 +108,7 @@ func Convert(dockerURL string, squash bool, outputDir string) ([]string, error) 
 	for _, layerID := range ancestry {
 		aciPath, err := buildACI(layerID, repoData, parsedURL, layersOutputDir)
 		if err != nil {
-			return nil, fmt.Errorf("Error building layer: %v\n", err)
+			return nil, fmt.Errorf("error building layer: %v\n", err)
 		}
 
 		aciLayerPaths = append(aciLayerPaths, aciPath)
@@ -123,7 +123,7 @@ func Convert(dockerURL string, squash bool, outputDir string) ([]string, error) 
 		squashedImagePath := path.Join(outputDir, squashedFilename)
 
 		if err := squashLayers(aciLayerPaths, squashedImagePath); err != nil {
-			return nil, fmt.Errorf("Error squashing image: %v\n", err)
+			return nil, fmt.Errorf("error squashing image: %v\n", err)
 		}
 		aciLayerPaths = []string{squashedImagePath}
 	}
@@ -203,14 +203,14 @@ func getImageIDFromTag(registry string, appName string, tag string, repoData *Re
 	client := &http.Client{}
 	req, err := http.NewRequest("GET", "https://"+path.Join(registry, "repositories", appName, "tags", tag), nil)
 	if err != nil {
-		return "", fmt.Errorf("Failed to get Image ID: %s, URL: %s", err, req.URL)
+		return "", fmt.Errorf("failed to get Image ID: %s, URL: %s", err, req.URL)
 	}
 
 	setAuthToken(req, repoData.Tokens)
 	setCookie(req, repoData.Cookie)
 	res, err := client.Do(req)
 	if err != nil {
-		return "", fmt.Errorf("Failed to get Image ID: %s, URL: %s", err, req.URL)
+		return "", fmt.Errorf("failed to get Image ID: %s, URL: %s", err, req.URL)
 	}
 	defer res.Body.Close()
 
@@ -227,7 +227,7 @@ func getImageIDFromTag(registry string, appName string, tag string, repoData *Re
 	var imageID string
 
 	if err := json.Unmarshal(j, &imageID); err != nil {
-		return "", fmt.Errorf("Error unmarshaling: %v", err)
+		return "", fmt.Errorf("error unmarshaling: %v", err)
 	}
 
 	return imageID, nil
@@ -260,7 +260,7 @@ func getAncestry(imgID, registry string, repoData *RepoData) ([]string, error) {
 	}
 
 	if err := json.Unmarshal(j, &ancestry); err != nil {
-		return nil, fmt.Errorf("Error unmarshaling: %v", err)
+		return nil, fmt.Errorf("error unmarshaling: %v", err)
 	}
 
 	return ancestry, nil
@@ -269,7 +269,7 @@ func getAncestry(imgID, registry string, repoData *RepoData) ([]string, error) {
 func buildACI(layerID string, repoData *RepoData, dockerURL *DockerURL, outputDir string) (string, error) {
 	tmpDir, err := ioutil.TempDir("", "docker2aci-")
 	if err != nil {
-		return "", fmt.Errorf("Error creating dir: %v", err)
+		return "", fmt.Errorf("error creating dir: %v", err)
 	}
 	defer os.RemoveAll(tmpDir)
 
@@ -277,40 +277,40 @@ func buildACI(layerID string, repoData *RepoData, dockerURL *DockerURL, outputDi
 	layerRootfs := filepath.Join(layerDest, "rootfs")
 	err = os.MkdirAll(layerRootfs, 0700)
 	if err != nil {
-		return "", fmt.Errorf("Error creating dir: %s", layerRootfs)
+		return "", fmt.Errorf("error creating dir: %s", layerRootfs)
 	}
 
 	j, size, err := getRemoteImageJSON(layerID, repoData.Endpoints[0], repoData)
 	if err != nil {
-		return "", fmt.Errorf("Error getting image json: %v", err)
+		return "", fmt.Errorf("error getting image json: %v", err)
 	}
 
 	layerData := DockerImageData{}
 	if err := json.Unmarshal(j, &layerData); err != nil {
-		return "", fmt.Errorf("Error unmarshaling layer data: %v", err)
+		return "", fmt.Errorf("error unmarshaling layer data: %v", err)
 	}
 
 	layer, err := getRemoteLayer(layerID, repoData.Endpoints[0], repoData, int64(size))
 	if err != nil {
-		return "", fmt.Errorf("Error getting the remote layer: %v", err)
+		return "", fmt.Errorf("error getting the remote layer: %v", err)
 	}
 	defer layer.Close()
 
 	layerFile, err := ioutil.TempFile(tmpDir, "dockerlayer-")
 	if err != nil {
-		return "", fmt.Errorf("Error creating layer: %v", err)
+		return "", fmt.Errorf("error creating layer: %v", err)
 	}
 
 	_, err = io.Copy(layerFile, layer)
 	if err != nil {
-		return "", fmt.Errorf("Error getting layer: %v", err)
+		return "", fmt.Errorf("error getting layer: %v", err)
 	}
 
 	layerFile.Sync()
 
 	manifest, err := generateManifest(layerData, dockerURL)
 	if err != nil {
-		return "", fmt.Errorf("Error generating the manifest: %v", err)
+		return "", fmt.Errorf("error generating the manifest: %v", err)
 	}
 
 	imageName := strings.Replace(dockerURL.ImageName, "/", "-", -1)
@@ -329,7 +329,7 @@ func buildACI(layerID string, repoData *RepoData, dockerURL *DockerURL, outputDi
 	aciPath = path.Join(outputDir, aciPath)
 
 	if err := writeACI(layerFile, *manifest, aciPath); err != nil {
-		return "", fmt.Errorf("Error writing ACI: %v", err)
+		return "", fmt.Errorf("error writing ACI: %v", err)
 	}
 
 	return aciPath, nil
@@ -364,7 +364,7 @@ func getRemoteImageJSON(imgID, registry string, repoData *RepoData) ([]byte, int
 
 	b, err := ioutil.ReadAll(res.Body)
 	if err != nil {
-		return nil, -1, fmt.Errorf("Failed to read downloaded json: %v (%s)", err, b)
+		return nil, -1, fmt.Errorf("failed to read downloaded json: %v (%s)", err, b)
 	}
 
 	return b, imageSize, nil
@@ -491,7 +491,7 @@ func writeACI(layer io.ReadSeeker, manifest schema.ImageManifest, output string)
 
 	aciFile, err := os.Create(output)
 	if err != nil {
-		return fmt.Errorf("Error creating ACI file: %v", err)
+		return fmt.Errorf("error creating ACI file: %v", err)
 	}
 	defer aciFile.Close()
 
@@ -508,7 +508,7 @@ func writeACI(layer io.ReadSeeker, manifest schema.ImageManifest, output string)
 			break
 		}
 		if err != nil {
-			return fmt.Errorf("Error reading layer tar entry: %v", err)
+			return fmt.Errorf("error reading layer tar entry: %v", err)
 		}
 		if hdr.Name == "./" {
 			continue
@@ -524,7 +524,7 @@ func writeACI(layer io.ReadSeeker, manifest schema.ImageManifest, output string)
 
 		err = archiveWriter.AddFile(hdr, reader)
 		if err != nil {
-			return fmt.Errorf("Error adding file to ACI: %v", err)
+			return fmt.Errorf("error adding file to ACI: %v", err)
 		}
 	}
 
@@ -602,7 +602,7 @@ func reduceACIs(squashAcc *SquashAccumulator, currentPath string) (*SquashAccumu
 			break
 		}
 		if err != nil {
-			return nil, fmt.Errorf("Error reading layer tar entry: %v", err)
+			return nil, fmt.Errorf("error reading layer tar entry: %v", err)
 		}
 
 		if hdr.Name == "manifest" {
@@ -613,10 +613,10 @@ func reduceACIs(squashAcc *SquashAccumulator, currentPath string) (*SquashAccumu
 			squashAcc.Filelist = append(squashAcc.Filelist, hdr.Name)
 
 			if err := squashAcc.WriteHeader(hdr); err != nil {
-				return nil, fmt.Errorf("Error writing header: %v", err)
+				return nil, fmt.Errorf("error writing header: %v", err)
 			}
 			if _, err := io.Copy(squashAcc, reader); err != nil {
-				return nil, fmt.Errorf("Error copying file into the tar out: %v", err)
+				return nil, fmt.Errorf("error copying file into the tar out: %v", err)
 			}
 		}
 	}
