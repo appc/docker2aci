@@ -95,7 +95,7 @@ func Convert(dockerURL string, squash bool, outputDir string) ([]string, error) 
 		return nil, fmt.Errorf("Error getting ancestry: %v\n", err)
 	}
 
-	layersOutputDir := "."
+	layersOutputDir := outputDir
 	if squash {
 		layersOutputDir, err = ioutil.TempDir("", "docker2aci-")
 		if err != nil {
