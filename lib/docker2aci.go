@@ -48,7 +48,7 @@ type DockerURL struct {
 	Tag       string
 }
 
-type SquashAcc struct {
+type SquashAccumulator struct {
 	OutWriter *tar.Writer
 	Manifests []schema.ImageManifest
 	Filelist  []string
@@ -545,7 +545,7 @@ func squashLayers(layers []string, squashedImagePath string) error {
 	}
 	defer squashedImageFile.Close()
 
-	squashAcc := new(SquashAcc)
+	squashAcc := new(SquashAccumulator)
 	squashAcc.OutWriter = tar.NewWriter(squashedImageFile)
 	for _, aciPath := range layers {
 		squashAcc, err = reduceACIs(squashAcc, aciPath)
@@ -578,7 +578,7 @@ func squashLayers(layers []string, squashedImagePath string) error {
 	return nil
 }
 
-func reduceACIs(squashAcc *SquashAcc, currentPath string) (*SquashAcc, error) {
+func reduceACIs(squashAcc *SquashAccumulator, currentPath string) (*SquashAccumulator, error) {
 	currentFile, err := os.Open(currentPath)
 	if err != nil {
 		return nil, err
