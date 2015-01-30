@@ -53,7 +53,7 @@ type DockerURL struct {
 type SquashAccumulator struct {
 	*tar.Writer
 	Manifests []schema.ImageManifest
-	Filelist  []string
+	Filemap   map[string]string
 }
 
 const (
@@ -105,7 +105,8 @@ func Convert(dockerURL string, squash bool, outputDir string) ([]string, error) 
 	}
 
 	var aciLayerPaths []string
-	for _, layerID := range ancestry {
+	for i := len(ancestry) - 1; i >= 0; i-- {
+		layerID := ancestry[i]
 		aciPath, err := buildACI(layerID, repoData, parsedURL, layersOutputDir)
 		if err != nil {
 			return nil, fmt.Errorf("error building layer: %v\n", err)
@@ -501,30 +502,28 @@ func writeACI(layer io.ReadSeeker, manifest schema.ImageManifest, output string)
 	defer archiveWriter.Close()
 
 	// Write files in rootfs/
-	for {
-		hdr, err := reader.Next()
-		if err == io.EOF {
-			// end of tar archive
-			break
+	if err = Walk(*reader, func(t *TarFile) error {
+		name := t.Header.Name
+
+		if name == "./" {
+			return nil
 		}
-		if err != nil {
-			return fmt.Errorf("error reading layer tar entry: %v", err)
+		if strings.HasPrefix(path.Base(name), ".wh.") {
+			return nil
 		}
-		if hdr.Name == "./" {
-			continue
-		}
-		if strings.HasPrefix(path.Base(hdr.Name), ".wh.") {
-			continue
-		}
-		hdr.Name = "rootfs/" + hdr.Name
-		if hdr.Typeflag == tar.TypeLink {
-			hdr.Linkname = "rootfs/" + hdr.Linkname
+		t.Header.Name = path.Join("rootfs", t.Header.Name)
+		if t.Header.Typeflag == tar.TypeLink {
+			t.Header.Linkname = path.Join("rootfs" + t.Header.Linkname)
 		}
 
-		err = archiveWriter.AddFile(hdr, reader)
+		err = archiveWriter.AddFile(t.Header, t.TarStream)
 		if err != nil {
 			return fmt.Errorf("error adding file to ACI: %v", err)
 		}
+
+		return nil
+	}); err != nil {
+		return err
 	}
 
 	return nil
@@ -540,10 +539,18 @@ func squashLayers(layers []string, squashedImagePath string) error {
 	squashAcc := &SquashAccumulator{
 		tar.NewWriter(squashedImageFile),
 		[]schema.ImageManifest{},
-		[]string{},
+		make(map[string]string),
 	}
+	squashAcc.Filemap = make(map[string]string)
 	for _, aciPath := range layers {
 		squashAcc, err = reduceACIs(squashAcc, aciPath)
+		if err != nil {
+			return err
+		}
+	}
+
+	for _, aciPath := range layers {
+		squashAcc, err = realReduceACIs(squashAcc, aciPath)
 		if err != nil {
 			return err
 		}
@@ -573,6 +580,28 @@ func squashLayers(layers []string, squashedImagePath string) error {
 	return nil
 }
 
+type TarFile struct {
+	Header    *tar.Header
+	TarStream io.Reader
+}
+
+func Walk(tarReader tar.Reader, walkFunc func(t *TarFile) error) error {
+	for {
+		hdr, err := tarReader.Next()
+		if err == io.EOF {
+			// end of tar archive
+			break
+		}
+		if err != nil {
+			return fmt.Errorf("Error reading tar entry: %v", err)
+		}
+		if err := walkFunc(&TarFile{Header: hdr, TarStream: &tarReader}); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func reduceACIs(squashAcc *SquashAccumulator, currentPath string) (*SquashAccumulator, error) {
 	currentFile, err := os.Open(currentPath)
 	if err != nil {
@@ -594,47 +623,61 @@ func reduceACIs(squashAcc *SquashAccumulator, currentPath string) (*SquashAccumu
 	if err != nil {
 		return nil, err
 	}
-	for {
-		hdr, err := reader.Next()
-		if err == io.EOF {
-			// end of tar archive
-			break
-		}
-		if err != nil {
-			return nil, fmt.Errorf("error reading layer tar entry: %v", err)
+
+	if err = Walk(*reader, func(t *TarFile) error {
+		name := t.Header.Name
+
+		if name == "manifest" {
+			return nil
 		}
 
-		if hdr.Name == "manifest" {
-			continue
-		}
-
-		if !in(squashAcc.Filelist, hdr.Name) {
-			squashAcc.Filelist = append(squashAcc.Filelist, hdr.Name)
-
-			if err := squashAcc.WriteHeader(hdr); err != nil {
-				return nil, fmt.Errorf("error writing header: %v", err)
-			}
-			if _, err := io.Copy(squashAcc, reader); err != nil {
-				return nil, fmt.Errorf("error copying file into the tar out: %v", err)
-			}
-		}
+		squashAcc.Filemap[name] = currentPath
+		return nil
+	}); err != nil {
+		return nil, err
 	}
 
 	return squashAcc, nil
 }
 
-func in(list []string, el string) bool {
-	for _, x := range list {
-		if el == x {
-			return true
-		}
+func realReduceACIs(squashAcc *SquashAccumulator, currentPath string) (*SquashAccumulator, error) {
+	currentFile, err := os.Open(currentPath)
+	if err != nil {
+		return nil, err
 	}
-	return false
+	defer currentFile.Close()
+
+	reader, err := aci.NewCompressedTarReader(currentFile)
+	if err != nil {
+		return nil, err
+	}
+	if err = Walk(*reader, func(t *TarFile) error {
+		name := t.Header.Name
+
+		if name == "manifest" {
+			return nil
+		}
+
+		if squashAcc.Filemap[name] == currentPath {
+			if err := squashAcc.WriteHeader(t.Header); err != nil {
+				return fmt.Errorf("Error writing header: %v", err)
+			}
+			if _, err := io.Copy(squashAcc, t.TarStream); err != nil {
+				return fmt.Errorf("Error copying file into the tar out: %v", err)
+			}
+		}
+
+		return nil
+	}); err != nil {
+		return nil, err
+	}
+
+	return squashAcc, nil
 }
 
 func mergeManifests(manifests []schema.ImageManifest) schema.ImageManifest {
 	// FIXME(iaguis) we take last layer's manifest as the final manifest for now
-	manifest := manifests[0]
+	manifest := manifests[len(manifests)-1]
 
 	manifest.Dependencies = nil
 
