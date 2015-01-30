@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"os"
 	"path"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -283,8 +284,8 @@ func buildACI(layerID string, repoData *RepoData, dockerURL *DockerURL, outputDi
 	}
 	defer os.RemoveAll(tmpDir)
 
-	layerDest := tmpDir + "/layer"
-	layerRootfs := layerDest + "/rootfs"
+	layerDest := filepath.Join(tmpDir, "layer")
+	layerRootfs := filepath.Join(layerDest, "rootfs")
 	err = os.MkdirAll(layerRootfs, 0700)
 	if err != nil {
 		return "", fmt.Errorf("Error creating dir: %s", layerRootfs)
