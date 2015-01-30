@@ -19,6 +19,8 @@ import (
 	"github.com/appc/spec/aci"
 	"github.com/appc/spec/schema"
 	"github.com/appc/spec/schema/types"
+	"github.com/docker/docker/pkg/parsers"
+	"github.com/docker/docker/registry"
 	"github.com/docker/docker/runconfig"
 )
 
@@ -72,7 +74,10 @@ const (
 // own ACI in outputDir.
 // It returns the list of generated ACI paths.
 func Convert(dockerURL string, squash bool, outputDir string) ([]string, error) {
-	parsedURL := parseDockerURL(dockerURL)
+	parsedURL, err := parseDockerURL(dockerURL)
+	if err != nil {
+		return nil, fmt.Errorf("error parsing docker url: %v\n", err)
+	}
 
 	repoData, err := getRepoData(parsedURL.IndexURL, parsedURL.ImageName)
 	if err != nil {
@@ -126,37 +131,25 @@ func Convert(dockerURL string, squash bool, outputDir string) ([]string, error) 
 	return aciLayerPaths, nil
 }
 
-func parseDockerURL(arg string) *DockerURL {
-	indexURL := defaultIndex
-	tag := defaultTag
-
-	argParts := strings.SplitN(arg, "/", 2)
-	var appString string
-	if len(argParts) > 1 {
-		if strings.Contains(argParts[0], ".") {
-			indexURL = argParts[0]
-			appString = argParts[1]
-		} else {
-			appString = path.Join(argParts...)
-		}
-	} else {
-		appString = argParts[0]
+func parseDockerURL(arg string) (*DockerURL, error) {
+	taglessRemote, tag := parsers.ParseRepositoryTag(arg)
+	if tag == "" {
+		tag = defaultTag
 	}
-
-	imageName := appString
-	appParts := strings.Split(appString, ":")
-
-	if len(appParts) > 1 {
-		tag = appParts[len(appParts)-1]
-		imageNameParts := appParts[0 : len(appParts)-1]
-		imageName = strings.Join(imageNameParts, ":")
+	repoInfo, err := registry.ParseRepositoryInfo(taglessRemote)
+	if err != nil {
+		return nil, err
+	}
+	indexURL := defaultIndex
+	if !repoInfo.Index.Official {
+		indexURL = repoInfo.Index.Name
 	}
 
 	return &DockerURL{
 		IndexURL:  indexURL,
-		ImageName: imageName,
+		ImageName: repoInfo.RemoteName,
 		Tag:       tag,
-	}
+	}, nil
 }
 
 func getRepoData(indexURL string, remote string) (*RepoData, error) {
