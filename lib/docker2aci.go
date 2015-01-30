@@ -133,7 +133,7 @@ func parseDockerURL(arg string) *DockerURL {
 	argParts := strings.SplitN(arg, "/", 2)
 	var appString string
 	if len(argParts) > 1 {
-		if strings.Index(argParts[0], ".") != -1 {
+		if strings.Contains(argParts[0], ".") {
 			indexURL = argParts[0]
 			appString = argParts[1]
 		} else {
@@ -521,7 +521,7 @@ func writeACI(layer io.ReadSeeker, manifest schema.ImageManifest, output string)
 			continue
 		}
 		// FIXME(iaguis) although unlikely, a file named like "/what.wh.ever should be legal
-		if strings.Index(hdr.Name, ".wh.") != -1 {
+		if strings.Contains(hdr.Name, ".wh.") {
 			continue
 		}
 		hdr.Name = "rootfs/" + hdr.Name
