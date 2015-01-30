@@ -225,7 +225,7 @@ func getImageIDFromTag(registry string, appName string, tag string, repoData *Re
 		return "", fmt.Errorf("HTTP code: %d. URL: %s", res.StatusCode, req.URL)
 	}
 
-	jsonString, err := ioutil.ReadAll(res.Body)
+	j, err := ioutil.ReadAll(res.Body)
 
 	if err != nil {
 		return "", err
@@ -233,7 +233,7 @@ func getImageIDFromTag(registry string, appName string, tag string, repoData *Re
 
 	var imageID string
 
-	if err := json.Unmarshal(jsonString, &imageID); err != nil {
+	if err := json.Unmarshal(j, &imageID); err != nil {
 		return "", fmt.Errorf("Error unmarshaling: %v", err)
 	}
 
@@ -261,12 +261,12 @@ func getAncestry(imgID, registry string, repoData *RepoData) ([]string, error) {
 
 	var ancestry []string
 
-	jsonString, err := ioutil.ReadAll(res.Body)
+	j, err := ioutil.ReadAll(res.Body)
 	if err != nil {
-		return nil, fmt.Errorf("Failed to read downloaded json: %s (%s)", err, jsonString)
+		return nil, fmt.Errorf("Failed to read downloaded json: %s (%s)", err, j)
 	}
 
-	if err := json.Unmarshal(jsonString, &ancestry); err != nil {
+	if err := json.Unmarshal(j, &ancestry); err != nil {
 		return nil, fmt.Errorf("Error unmarshaling: %v", err)
 	}
 
@@ -287,13 +287,13 @@ func buildACI(layerID string, repoData *RepoData, dockerURL *DockerURL, outputDi
 		return "", fmt.Errorf("Error creating dir: %s", layerRootfs)
 	}
 
-	jsonString, size, err := getRemoteImageJSON(layerID, repoData.Endpoints[0], repoData)
+	j, size, err := getRemoteImageJSON(layerID, repoData.Endpoints[0], repoData)
 	if err != nil {
 		return "", fmt.Errorf("Error getting image json: %v", err)
 	}
 
 	layerData := DockerImageData{}
-	if err := json.Unmarshal(jsonString, &layerData); err != nil {
+	if err := json.Unmarshal(j, &layerData); err != nil {
 		return "", fmt.Errorf("Error unmarshaling layer data: %v", err)
 	}
 
@@ -369,12 +369,12 @@ func getRemoteImageJSON(imgID, registry string, repoData *RepoData) ([]byte, int
 		}
 	}
 
-	jsonBytes, err := ioutil.ReadAll(res.Body)
+	b, err := ioutil.ReadAll(res.Body)
 	if err != nil {
-		return nil, -1, fmt.Errorf("Failed to read downloaded json: %v (%s)", err, jsonBytes)
+		return nil, -1, fmt.Errorf("Failed to read downloaded json: %v (%s)", err, b)
 	}
 
-	return jsonBytes, imageSize, nil
+	return b, imageSize, nil
 }
 
 func getRemoteLayer(imgID, registry string, repoData *RepoData, imgSize int64) (io.ReadCloser, error) {
@@ -557,7 +557,7 @@ func squashLayers(layers []string, squashedImagePath string) error {
 
 	finalManifest := mergeManifests(squashAcc.Manifests)
 
-	finalManifestBytes, err := json.Marshal(finalManifest)
+	b, err := json.Marshal(finalManifest)
 	if err != nil {
 		return err
 	}
@@ -566,12 +566,12 @@ func squashLayers(layers []string, squashedImagePath string) error {
 	hdr := &tar.Header{
 		Name: "manifest",
 		Mode: 0600,
-		Size: int64(len(finalManifestBytes)),
+		Size: int64(len(b)),
 	}
 	if err := squashAcc.OutWriter.WriteHeader(hdr); err != nil {
 		return err
 	}
-	if _, err := squashAcc.OutWriter.Write(finalManifestBytes); err != nil {
+	if _, err := squashAcc.OutWriter.Write(b); err != nil {
 		return err
 	}
 
