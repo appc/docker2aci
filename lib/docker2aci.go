@@ -502,10 +502,10 @@ func writeACI(layer io.ReadSeeker, manifest schema.ImageManifest, output string)
 		if name == "./" {
 			return nil
 		}
-		if strings.HasPrefix(path.Base(name), ".wh.") {
+		t.Header.Name = path.Join("rootfs", name)
+		if strings.Contains(t.Header.Name, "/.wh.") {
 			return nil
 		}
-		t.Header.Name = path.Join("rootfs", name)
 		if t.Header.Typeflag == tar.TypeLink {
 			t.Header.Linkname = path.Join("rootfs" + t.Linkname())
 		}
