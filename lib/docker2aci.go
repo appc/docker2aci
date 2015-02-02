@@ -328,7 +328,30 @@ func buildACI(layerID string, repoData *RepoData, dockerURL *DockerURL, outputDi
 		return "", fmt.Errorf("error writing ACI: %v", err)
 	}
 
+	if err := validateACI(aciPath); err != nil {
+		return "", fmt.Errorf("invalid aci generated: %v", err)
+	}
+
 	return aciPath, nil
+}
+
+func validateACI(aciPath string) error {
+	aciFile, err := os.Open(aciPath)
+	if err != nil {
+		return err
+	}
+	defer aciFile.Close()
+
+	reader, err := aci.NewCompressedTarReader(aciFile)
+	if err != nil {
+		return err
+	}
+
+	if err := aci.ValidateArchive(reader); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func getRemoteImageJSON(imgID, registry string, repoData *RepoData) ([]byte, int, error) {
@@ -599,6 +622,10 @@ func SquashLayers(layers []string, squashedImagePath string) error {
 	defer squashedImageFile.Close()
 
 	if err := writeSquashedImage(squashedImageFile, layers, fileMap, manifests); err != nil {
+		return err
+	}
+
+	if err := validateACI(squashedImagePath); err != nil {
 		return err
 	}
 
