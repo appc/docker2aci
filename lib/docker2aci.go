@@ -492,9 +492,11 @@ func writeACI(layer io.ReadSeeker, manifest schema.ImageManifest, output string)
 	defer aciFile.Close()
 
 	trw := tar.NewWriter(aciFile)
+	defer trw.Close()
 
-	archiveWriter := aci.NewImageWriter(manifest, trw)
-	defer archiveWriter.Close()
+	if err := addMinimalACIStructure(trw, manifest); err != nil {
+		return fmt.Errorf("error writing rootfs entry: %v", err)
+	}
 
 	// Write files in rootfs/
 	if err = tarball.Walk(*reader, func(t *tarball.TarFile) error {
@@ -510,13 +512,67 @@ func writeACI(layer io.ReadSeeker, manifest schema.ImageManifest, output string)
 			t.Header.Linkname = path.Join("rootfs" + t.Linkname())
 		}
 
-		err = archiveWriter.AddFile(t.Header, t.TarStream)
-		if err != nil {
-			return fmt.Errorf("error adding file to ACI: %v", err)
+		if err := trw.WriteHeader(t.Header); err != nil {
+			return err
+		}
+		if _, err := io.Copy(trw, t.TarStream); err != nil {
+			return err
 		}
 
 		return nil
 	}); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func addMinimalACIStructure(tarWriter *tar.Writer, manifest schema.ImageManifest) error {
+	hdr := getGenericTarHeader()
+	hdr.Name = "rootfs"
+	hdr.Mode = 0755
+	hdr.Size = int64(0)
+	hdr.Typeflag = tar.TypeDir
+
+	if err := tarWriter.WriteHeader(hdr); err != nil {
+		return err
+	}
+
+	writeManifest(tarWriter, manifest)
+
+	return nil
+}
+
+func getGenericTarHeader() *tar.Header {
+	// FIXME(iaguis) Use docker image time instead of the Unix Epoch?
+	hdr := &tar.Header{
+		Uid:        0,
+		Gid:        0,
+		ModTime:    time.Unix(0, 0),
+		Uname:      "0",
+		Gname:      "0",
+		ChangeTime: time.Unix(0, 0),
+	}
+
+	return hdr
+}
+
+func writeManifest(outputWriter *tar.Writer, manifest schema.ImageManifest) error {
+	b, err := json.Marshal(manifest)
+	if err != nil {
+		return err
+	}
+
+	hdr := getGenericTarHeader()
+	hdr.Name = "manifest"
+	hdr.Mode = 0644
+	hdr.Size = int64(len(b))
+	hdr.Typeflag = tar.TypeReg
+
+	if err := outputWriter.WriteHeader(hdr); err != nil {
+		return err
+	}
+	if _, err := outputWriter.Write(b); err != nil {
 		return err
 	}
 
@@ -631,21 +687,7 @@ func writeSquashedImage(outputFile *os.File, layers []string, fileMap map[string
 
 	finalManifest := mergeManifests(manifests)
 
-	b, err := json.Marshal(finalManifest)
-	if err != nil {
-		return err
-	}
-
-	// Write final manifest
-	hdr := &tar.Header{
-		Name: "manifest",
-		Mode: 0600,
-		Size: int64(len(b)),
-	}
-	if err := outputWriter.WriteHeader(hdr); err != nil {
-		return err
-	}
-	if _, err := outputWriter.Write(b); err != nil {
+	if err := writeManifest(outputWriter, finalManifest); err != nil {
 		return err
 	}
 
