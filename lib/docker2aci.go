@@ -555,6 +555,18 @@ func writeACI(layer io.ReadSeeker, manifest schema.ImageManifest, output string)
 }
 
 func addMinimalACIStructure(tarWriter *tar.Writer, manifest schema.ImageManifest) error {
+	if err := writeRootfsDir(tarWriter); err != nil {
+		return err
+	}
+
+	if err := writeManifest(tarWriter, manifest); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func writeRootfsDir(tarWriter *tar.Writer) error {
 	hdr := getGenericTarHeader()
 	hdr.Name = "rootfs"
 	hdr.Mode = 0755
@@ -562,10 +574,6 @@ func addMinimalACIStructure(tarWriter *tar.Writer, manifest schema.ImageManifest
 	hdr.Typeflag = tar.TypeDir
 
 	if err := tarWriter.WriteHeader(hdr); err != nil {
-		return err
-	}
-
-	if err := writeManifest(tarWriter, manifest); err != nil {
 		return err
 	}
 
