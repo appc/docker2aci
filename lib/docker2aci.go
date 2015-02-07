@@ -20,39 +20,9 @@ import (
 	"github.com/appc/spec/aci"
 	"github.com/appc/spec/schema"
 	"github.com/appc/spec/schema/types"
-	"github.com/docker/docker/pkg/parsers"
-	"github.com/docker/docker/registry"
-	"github.com/docker/docker/runconfig"
 )
 
-type DockerImageData struct {
-	ID            string            `json:"id"`
-	Parent        string            `json:"parent,omitempty"`
-	Comment       string            `json:"comment,omitempty"`
-	Created       time.Time         `json:"created"`
-	Container     string            `json:"container,omitempty"`
-	DockerVersion string            `json:"docker_version,omitempty"`
-	Author        string            `json:"author,omitempty"`
-	Config        *runconfig.Config `json:"config,omitempty"`
-	Architecture  string            `json:"architecture,omitempty"`
-	OS            string            `json:"os,omitempty"`
-	Checksum      string            `json:"checksum"`
-}
-
-type RepoData struct {
-	Tokens    []string
-	Endpoints []string
-	Cookie    []string
-}
-
-type DockerURL struct {
-	IndexURL  string
-	ImageName string
-	Tag       string
-}
-
 const (
-	defaultIndex  = "index.docker.io"
 	defaultTag    = "latest"
 	schemaVersion = "0.1.1"
 )
@@ -127,23 +97,16 @@ func Convert(dockerURL string, squash bool, outputDir string) ([]string, error) 
 	return aciLayerPaths, nil
 }
 
-func parseDockerURL(arg string) (*DockerURL, error) {
-	taglessRemote, tag := parsers.ParseRepositoryTag(arg)
+func parseDockerURL(arg string) (*ParsedDockerURL, error) {
+	taglessRemote, tag := parseRepositoryTag(arg)
 	if tag == "" {
 		tag = defaultTag
 	}
-	repoInfo, err := registry.ParseRepositoryInfo(taglessRemote)
-	if err != nil {
-		return nil, err
-	}
-	indexURL := defaultIndex
-	if !repoInfo.Index.Official {
-		indexURL = repoInfo.Index.Name
-	}
+	indexURL, imageName := splitReposName(taglessRemote)
 
-	return &DockerURL{
+	return &ParsedDockerURL{
 		IndexURL:  indexURL,
-		ImageName: repoInfo.RemoteName,
+		ImageName: imageName,
 		Tag:       tag,
 	}, nil
 }
@@ -262,7 +225,7 @@ func getAncestry(imgID, registry string, repoData *RepoData) ([]string, error) {
 	return ancestry, nil
 }
 
-func buildACI(layerID string, repoData *RepoData, dockerURL *DockerURL, outputDir string) (string, error) {
+func buildACI(layerID string, repoData *RepoData, dockerURL *ParsedDockerURL, outputDir string) (string, error) {
 	tmpDir, err := ioutil.TempDir("", "docker2aci-")
 	if err != nil {
 		return "", fmt.Errorf("error creating dir: %v", err)
@@ -414,7 +377,7 @@ func getRemoteLayer(imgID, registry string, repoData *RepoData, imgSize int64) (
 	return res.Body, nil
 }
 
-func generateManifest(layerData DockerImageData, dockerURL *DockerURL) (*schema.ImageManifest, error) {
+func generateManifest(layerData DockerImageData, dockerURL *ParsedDockerURL) (*schema.ImageManifest, error) {
 	dockerConfig := layerData.Config
 	genManifest := &schema.ImageManifest{}
 
