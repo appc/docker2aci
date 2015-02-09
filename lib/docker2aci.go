@@ -396,6 +396,10 @@ func generateManifest(layerData DockerImageData, dockerURL *ParsedDockerURL) (*s
 	genManifest := &schema.ImageManifest{}
 
 	appURL := dockerURL.IndexURL + "/" + dockerURL.ImageName + "-" + layerData.ID
+	appURL, err := types.SanitizeACName(appURL)
+	if err != nil {
+		return nil, err
+	}
 	name, err := types.NewACName(appURL)
 	if err != nil {
 		return nil, err
@@ -453,7 +457,10 @@ func generateManifest(layerData DockerImageData, dockerURL *ParsedDockerURL) (*s
 	if layerData.Parent != "" {
 		var dependencies types.Dependencies
 		parentAppNameString := dockerURL.IndexURL + "/" + dockerURL.ImageName + "-" + layerData.Parent
-
+		parentAppNameString, err := types.SanitizeACName(parentAppNameString)
+		if err != nil {
+			return nil, err
+		}
 		parentAppName, err := types.NewACName(parentAppNameString)
 		if err != nil {
 			return nil, err
