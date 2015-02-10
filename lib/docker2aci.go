@@ -524,7 +524,9 @@ func addMinimalACIStructure(tarWriter *tar.Writer, manifest schema.ImageManifest
 		return err
 	}
 
-	writeManifest(tarWriter, manifest)
+	if err := writeManifest(tarWriter, manifest); err != nil {
+		return err
+	}
 
 	return nil
 }
