@@ -495,7 +495,7 @@ func writeACI(layer io.ReadSeeker, manifest schema.ImageManifest, output string)
 			return nil
 		}
 		if t.Header.Typeflag == tar.TypeLink {
-			t.Header.Linkname = path.Join("rootfs" + t.Linkname())
+			t.Header.Linkname = path.Join("rootfs", t.Linkname())
 		}
 
 		if err := trw.WriteHeader(t.Header); err != nil {
