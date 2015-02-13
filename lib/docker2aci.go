@@ -756,8 +756,12 @@ func mergeManifests(manifests []schema.ImageManifest) schema.ImageManifest {
 		manifest.Labels = append(manifest.Labels[:layerIndex], manifest.Labels[layerIndex+1:]...)
 	}
 
+	// strip layerID:
+	// myregistry.com/organization/app-name-85738f8f9a7f1b04b5329c590ebcb9e425925c6d0984089c43a022de4f19c281
+	// myregistry.com/organization/app-name
+	n := strings.LastIndex(manifest.Name.String(), "-")
 	// this can't fail because the old name is legal
-	nameWithoutLayerID, _ := types.NewACName(strings.Split(manifest.Name.String(), "-")[0])
+	nameWithoutLayerID, _ := types.NewACName(manifest.Name.String()[:n])
 
 	manifest.Name = *nameWithoutLayerID
 
