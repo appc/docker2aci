@@ -417,12 +417,7 @@ func generateManifest(layerData DockerImageData, dockerURL *ParsedDockerURL) (*s
 	genManifest.Labels = labels
 
 	if dockerConfig != nil {
-		var exec types.Exec
-		if len(dockerConfig.Cmd) > 0 {
-			exec = types.Exec(dockerConfig.Cmd)
-		} else if len(dockerConfig.Entrypoint) > 0 {
-			exec = types.Exec(dockerConfig.Entrypoint)
-		}
+		exec := getExecCommand(dockerConfig.Entrypoint, dockerConfig.Cmd)
 		if exec != nil {
 			user, group := parseDockerUser(dockerConfig.User)
 			app := &types.App{Exec: exec, User: user, Group: group}
@@ -445,6 +440,20 @@ func generateManifest(layerData DockerImageData, dockerURL *ParsedDockerURL) (*s
 	}
 
 	return genManifest, nil
+}
+
+func getExecCommand(entrypoint []string, cmd []string) types.Exec {
+	var command []string
+	if entrypoint == nil && cmd == nil {
+		return nil
+	}
+	command = append(entrypoint, cmd...)
+	// non-absolute paths are not allowed, fallback to "/bin/sh -c command"
+	if !filepath.IsAbs(command[0]) {
+		command_prefix := []string{"/bin/sh", "-c"}
+		command = append(command_prefix, strings.Join(command, " "))
+	}
+	return command
 }
 
 func parseDockerUser(dockerUser string) (string, string) {
