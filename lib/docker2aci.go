@@ -425,7 +425,18 @@ func generateManifest(layerData DockerImageData, dockerURL *ParsedDockerURL) (*s
 		}
 		if exec != nil {
 			user, group := parseDockerUser(dockerConfig.User)
-			app := &types.App{Exec: exec, User: user, Group: group}
+			var env types.Environment
+			for _, v := range dockerConfig.Env {
+				parts := strings.SplitN(v, "=", 2)
+				env.Set(parts[0], parts[1])
+			}
+			app := &types.App{
+				Exec:             exec,
+				User:             user,
+				Group:            group,
+				Environment:      env,
+				WorkingDirectory: dockerConfig.WorkingDir,
+			}
 			genManifest.App = app
 		}
 	}
