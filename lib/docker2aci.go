@@ -525,8 +525,7 @@ func writeACI(layer io.ReadSeeker, manifest schema.ImageManifest, output string)
 		return fmt.Errorf("error writing rootfs entry: %v", err)
 	}
 
-	// Write files in rootfs/
-	if err = tarball.Walk(*reader, func(t *tarball.TarFile) error {
+	convWalker := func(t *tarball.TarFile) error {
 		name := t.Name()
 		if name == "./" {
 			return nil
@@ -547,7 +546,10 @@ func writeACI(layer io.ReadSeeker, manifest schema.ImageManifest, output string)
 		}
 
 		return nil
-	}); err != nil {
+	}
+
+	// Write files in rootfs/
+	if err := tarball.Walk(*reader, convWalker); err != nil {
 		return err
 	}
 
