@@ -15,7 +15,11 @@
 package docker2aci
 
 import (
+	"encoding/base64"
+	"fmt"
+	"os"
 	"path"
+	"runtime"
 	"strings"
 )
 
@@ -33,4 +37,25 @@ func makeEndpointsList(headers []string) []string {
 	}
 
 	return endpoints
+}
+
+func decodeDockerAuth(s string) (string, string, error) {
+	decoded, err := base64.StdEncoding.DecodeString(s)
+	if err != nil {
+		return "", "", err
+	}
+	parts := strings.SplitN(string(decoded), ":", 2)
+	if len(parts) != 2 {
+		return "", "", fmt.Errorf("invalid auth configuration file")
+	}
+	user := parts[0]
+	password := strings.Trim(parts[1], "\x00")
+	return user, password, nil
+}
+
+func getHomeDir() string {
+	if runtime.GOOS == "windows" {
+		return os.Getenv("USERPROFILE")
+	}
+	return os.Getenv("HOME")
 }

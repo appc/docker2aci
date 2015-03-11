@@ -38,8 +38,9 @@ import (
 )
 
 const (
-	defaultTag    = "latest"
-	schemaVersion = "0.1.1"
+	defaultTag        = "latest"
+	schemaVersion     = "0.1.1"
+	dockercfgFileName = ".dockercfg"
 )
 
 // Convert generates ACI images from docker registry URLs.
@@ -137,7 +138,15 @@ func getRepoData(indexURL string, remote string) (*RepoData, error) {
 		return nil, err
 	}
 
-	// TODO(iaguis) add auth?
+	username, password, err := getAuthInfo(indexURL)
+	if err != nil {
+		return nil, fmt.Errorf("error getting authentication info: %v", err)
+	}
+
+	if username != "" && password != "" {
+		req.SetBasicAuth(username, password)
+	}
+
 	req.Header.Set("X-Docker-Token", "true")
 
 	res, err := client.Do(req)
@@ -173,6 +182,37 @@ func getRepoData(indexURL string, remote string) (*RepoData, error) {
 		Tokens:    tokens,
 		Cookie:    cookies,
 	}, nil
+}
+
+func getAuthInfo(indexServer string) (string, string, error) {
+	dockerCfgPath := path.Join(getHomeDir(), dockercfgFileName)
+
+	if _, err := os.Stat(dockerCfgPath); os.IsNotExist(err) {
+		return "", "", nil
+	}
+
+	j, err := ioutil.ReadFile(dockerCfgPath)
+	if err != nil {
+		return "", "", err
+	}
+
+	var dockerAuth map[string]DockerAuthConfig
+	if err := json.Unmarshal(j, &dockerAuth); err != nil {
+		return "", "", err
+	}
+
+	// the official auth uses the full address instead of the hostname
+	officialAddress := "https://" + indexServer + "/v1/"
+	if c, ok := dockerAuth[officialAddress]; ok {
+		return decodeDockerAuth(c.Auth)
+	}
+
+	// try the normal case
+	if c, ok := dockerAuth[indexServer]; ok {
+		return decodeDockerAuth(c.Auth)
+	}
+
+	return "", "", nil
 }
 
 func getImageIDFromTag(registry string, appName string, tag string, repoData *RepoData) (string, error) {
