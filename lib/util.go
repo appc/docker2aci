@@ -15,6 +15,7 @@
 package docker2aci
 
 import (
+	"fmt"
 	"path"
 	"strings"
 )
@@ -33,4 +34,14 @@ func makeEndpointsList(headers []string) []string {
 	}
 
 	return endpoints
+}
+
+func quote(l []string) []string {
+	var quoted []string
+
+	for _, s := range l {
+		quoted = append(quoted, fmt.Sprintf("%q", s))
+	}
+
+	return quoted
 }

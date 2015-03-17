@@ -486,7 +486,8 @@ func getExecCommand(entrypoint []string, cmd []string) types.Exec {
 	// non-absolute paths are not allowed, fallback to "/bin/sh -c command"
 	if len(command) > 0 && !filepath.IsAbs(command[0]) {
 		command_prefix := []string{"/bin/sh", "-c"}
-		command = append(command_prefix, strings.Join(command, " "))
+		quoted_command := quote(command)
+		command = append(command_prefix, strings.Join(quoted_command, " "))
 	}
 	return command
 }
