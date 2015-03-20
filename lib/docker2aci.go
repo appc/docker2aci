@@ -18,6 +18,7 @@ package docker2aci
 
 import (
 	"archive/tar"
+	"compress/gzip"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -522,7 +523,9 @@ func writeACI(layer io.ReadSeeker, manifest schema.ImageManifest, output string)
 	}
 	defer aciFile.Close()
 
-	trw := tar.NewWriter(aciFile)
+	gw := gzip.NewWriter(aciFile)
+	defer gw.Close()
+	trw := tar.NewWriter(gw)
 	defer trw.Close()
 
 	if err := addMinimalACIStructure(trw, manifest); err != nil {
@@ -679,7 +682,9 @@ func getManifests(renderedACI acirenderer.RenderedACI, aciRegistry acirenderer.A
 }
 
 func writeSquashedImage(outputFile *os.File, renderedACI acirenderer.RenderedACI, aciProvider acirenderer.ACIProvider, manifests []schema.ImageManifest) error {
-	outputWriter := tar.NewWriter(outputFile)
+	gw := gzip.NewWriter(outputFile)
+	defer gw.Close()
+	outputWriter := tar.NewWriter(gw)
 	defer outputWriter.Close()
 
 	for _, aciFile := range renderedACI {

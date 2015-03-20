@@ -1,6 +1,8 @@
 package docker2aci
 
 import (
+	"compress/gzip"
+	"crypto/sha512"
 	"fmt"
 	"hash"
 	"io"
@@ -34,25 +36,32 @@ func NewConversionStore() *ConversionStore {
 }
 
 func (ms *ConversionStore) WriteACI(path string) (string, error) {
-	data, err := ioutil.ReadFile(path)
-	if err != nil {
-		return "", err
-	}
-
 	f, err := os.Open(path)
 	if err != nil {
 		return "", err
 	}
 	defer f.Close()
 
-	imageID := types.NewHashSHA512(data)
+	gr, err := gzip.NewReader(f)
+	if err != nil {
+		return "", err
+	}
+	defer gr.Close()
+
+	imageID := sha512.New()
+	r := io.TeeReader(gr, imageID)
+
+	// read the file so we can get the hash
+	if _, err := io.Copy(ioutil.Discard, r); err != nil {
+		return "", fmt.Errorf("error reading ACI: %v", err)
+	}
 
 	im, err := aci.ManifestFromImage(f)
 	if err != nil {
 		return "", err
 	}
 
-	key := imageID.String()
+	key := ms.HashToKey(imageID)
 	ms.acis[key] = &aciInfo{path: path, key: key, ImageManifest: im}
 	return key, nil
 }
@@ -86,7 +95,12 @@ func (ms *ConversionStore) ReadStream(key string) (io.ReadCloser, error) {
 		return nil, fmt.Errorf("error opening aci: %s", aci.path)
 	}
 
-	return f, nil
+	gr, err := gzip.NewReader(f)
+	if err != nil {
+		return nil, fmt.Errorf("error reading gzip: %v", err)
+	}
+
+	return gr, nil
 }
 
 func (ms *ConversionStore) ResolveKey(key string) (string, error) {
