@@ -55,10 +55,7 @@ const (
 // own ACI in outputDir.
 // It returns the list of generated ACI paths.
 func Convert(dockerURL string, squash bool, outputDir string) ([]string, error) {
-	parsedURL, err := parseDockerURL(dockerURL)
-	if err != nil {
-		return nil, fmt.Errorf("error parsing docker url: %v\n", err)
-	}
+	parsedURL := parseDockerURL(dockerURL)
 
 	repoData, err := getRepoData(parsedURL.IndexURL, parsedURL.ImageName)
 	if err != nil {
@@ -93,7 +90,7 @@ func Convert(dockerURL string, squash bool, outputDir string) ([]string, error) 
 	for i := len(ancestry) - 1; i >= 0; i-- {
 		layerID := ancestry[i]
 
-		aciPath, manifest, err := buildACI(layerID, repoData, parsedURL, layersOutputDir, curPwl)
+		aciPath, manifest, err := buildACIFromRemote(layerID, repoData, parsedURL, layersOutputDir, curPwl)
 		if err != nil {
 			return nil, fmt.Errorf("error building layer: %v\n", err)
 		}
@@ -121,7 +118,277 @@ func Convert(dockerURL string, squash bool, outputDir string) ([]string, error) 
 	return aciLayerPaths, nil
 }
 
-func parseDockerURL(arg string) (*ParsedDockerURL, error) {
+// ConvertFile generates ACI images from a file generated with "docker save".
+// It takes as input the file and a tag.
+//
+// If the squash flag is true, it squashes all the layers in one file and
+// places this file in outputDir; if it is false, it places every layer in its
+// own ACI in outputDir.
+// It returns the list of generated ACI paths.
+func ConvertFile(dockerURL string, filePath string, squash bool, outputDir string) ([]string, error) {
+	parsedURL := parseDockerURL(dockerURL)
+
+	file, err := os.Open(filePath)
+	if err != nil {
+		return nil, fmt.Errorf("error opening file: %v", err)
+	}
+	defer file.Close()
+
+	appImageID, parsedURL, err := getImageIDFromFile(file, parsedURL)
+	if err != nil {
+		return nil, fmt.Errorf("error getting ImageID: %v", err)
+	}
+
+	layersOutputDir := outputDir
+	if squash {
+		layersOutputDir, err = ioutil.TempDir("", "docker2aci-")
+		if err != nil {
+			return nil, fmt.Errorf("error creating dir: %v", err)
+		}
+	}
+
+	conversionStore := NewConversionStore()
+
+	layerID := appImageID
+
+	i := 0
+	var images acirenderer.Images
+	var aciLayerPaths []string
+	var curPwl []string
+	for layerID != "" {
+		aciPath, manifest, parentID, err := buildACIFromFile(file, layerID, parsedURL, layersOutputDir, curPwl)
+		if err != nil {
+			return nil, fmt.Errorf("error building layer: %v", err)
+		}
+
+		key, err := conversionStore.WriteACI(aciPath)
+		if err != nil {
+			return nil, fmt.Errorf("error inserting in the conversion store: %v\n", err)
+		}
+
+		images = append(images, acirenderer.Image{Im: manifest, Key: key, Level: uint16(i)})
+		aciLayerPaths = append(aciLayerPaths, aciPath)
+
+		layerID = parentID
+	}
+
+	if squash {
+		squashedImagePath, err := SquashLayers(images, conversionStore, *parsedURL, outputDir)
+		if err != nil {
+			return nil, fmt.Errorf("error squashing image: %v\n", err)
+		}
+		aciLayerPaths = []string{squashedImagePath}
+	}
+
+	return aciLayerPaths, nil
+}
+
+// TODO(iaguis): clean up and revise logic
+func getImageIDFromFile(file *os.File, dockerURL *ParsedDockerURL) (string, *ParsedDockerURL, error) {
+	type tags map[string]string
+	type apps map[string]tags
+
+	_, err := file.Seek(0, 0)
+	if err != nil {
+		return "", nil, fmt.Errorf("error seeking file: %v", err)
+	}
+
+	var imageID string
+	var appName string
+	reposWalker := func(t *tarball.TarFile) error {
+		cleanName := filepath.Clean(t.Name())
+
+		if cleanName == "repositories" {
+			repob, err := ioutil.ReadAll(t.TarStream)
+			if err != nil {
+				return fmt.Errorf("error reading repositories file: %v", err)
+			}
+
+			var repositories apps
+			if err := json.Unmarshal(repob, &repositories); err != nil {
+				return fmt.Errorf("error Unmarshaling repositories file")
+			}
+
+			if dockerURL == nil {
+				if len(repositories) > 1 {
+					var appNames []string
+					for key, _ := range repositories {
+						appNames = append(appNames, key)
+					}
+					return fmt.Errorf("several images found, choose one of:\n%s", strings.Join(appNames, " "))
+				} else {
+					for key, _ := range repositories {
+						appName = key
+					}
+				}
+			} else {
+				appName = dockerURL.ImageName
+			}
+
+			tag := "latest"
+			if dockerURL != nil {
+				tag = dockerURL.Tag
+			}
+
+			if _, ok := repositories[appName]; !ok {
+				return fmt.Errorf("app %q not found", appName)
+			}
+
+			_, ok := repositories[appName][tag]
+			if !ok {
+				if len(repositories[appName]) == 1 {
+					for key, _ := range repositories[appName] {
+						tag = key
+					}
+				} else {
+					return fmt.Errorf("tag %q not found", tag)
+				}
+			}
+
+			if dockerURL == nil {
+				dockerURL = &ParsedDockerURL{
+					IndexURL:  "",
+					Tag:       tag,
+					ImageName: appName,
+				}
+			}
+
+			imageID = string(repositories[appName][tag])
+		}
+
+		return nil
+	}
+
+	tr := tar.NewReader(file)
+	if err := tarball.Walk(*tr, reposWalker); err != nil {
+		return "", nil, err
+	}
+
+	if imageID == "" {
+		return "", nil, fmt.Errorf("repositories file not found")
+	}
+
+	return imageID, dockerURL, nil
+}
+
+func buildACIFromFile(file *os.File, layerID string, dockerURL *ParsedDockerURL, outputDir string, curPwl []string) (string, *schema.ImageManifest, string, error) {
+	tmpDir, err := ioutil.TempDir("", "docker2aci-")
+	if err != nil {
+		return "", nil, "", fmt.Errorf("error creating dir: %v", err)
+	}
+
+	j, err := getFileJSON(file, layerID)
+	if err != nil {
+		return "", nil, "", fmt.Errorf("error getting image json: %v", err)
+	}
+
+	layerData := DockerImageData{}
+	if err := json.Unmarshal(j, &layerData); err != nil {
+		return "", nil, "", fmt.Errorf("error unmarshaling layer data: %v", err)
+	}
+
+	parentID := layerData.Parent
+
+	tmpLayerPath := path.Join(tmpDir, layerID)
+	tmpLayerPath += ".tar"
+
+	layerFile, err := extractEmbeddedLayerFromFile(file, layerID, tmpLayerPath)
+	if err != nil {
+		return "", nil, "", fmt.Errorf("error getting layer from file: %v", err)
+	}
+	defer layerFile.Close()
+
+	aciPath, manifest, err := generateACI(layerData, dockerURL, outputDir, layerFile, curPwl)
+	if err != nil {
+		return "", nil, "", fmt.Errorf("error generating ACI: %v", err)
+	}
+
+	return aciPath, manifest, parentID, nil
+}
+
+// FIXME(iaguis) find a proper name
+func getFileJSON(file *os.File, layerID string) ([]byte, error) {
+	jsonPath := path.Join(layerID, "json")
+	return getTarFileBytes(file, jsonPath)
+}
+
+func getTarFileBytes(file *os.File, path string) ([]byte, error) {
+	_, err := file.Seek(0, 0)
+	if err != nil {
+		fmt.Errorf("error seeking file: %v", err)
+	}
+
+	var fileBytes []byte
+	fileWalker := func(t *tarball.TarFile) error {
+		cleanName := filepath.Clean(t.Name())
+
+		if cleanName == path {
+			fileBytes, err = ioutil.ReadAll(t.TarStream)
+			if err != nil {
+				return err
+			}
+		}
+
+		return nil
+	}
+
+	tr := tar.NewReader(file)
+	if err := tarball.Walk(*tr, fileWalker); err != nil {
+		return nil, err
+	}
+
+	if fileBytes == nil {
+		return nil, fmt.Errorf("file %q not found", path)
+	}
+
+	return fileBytes, nil
+}
+
+// FIXME(iaguis) may be misleading, we don't extract the layer, but the tarred layer
+func extractEmbeddedLayerFromFile(file *os.File, layerID string, outputPath string) (*os.File, error) {
+	_, err := file.Seek(0, 0)
+	if err != nil {
+		fmt.Errorf("error seeking file: %v", err)
+	}
+
+	layerTarPath := path.Join(layerID, "layer.tar")
+
+	var layerFile *os.File
+	fileWalker := func(t *tarball.TarFile) error {
+		cleanName := filepath.Clean(t.Name())
+
+		if cleanName == layerTarPath {
+			layerFile, err = os.Create(outputPath)
+			if err != nil {
+				return fmt.Errorf("error creating layer: %v", err)
+			}
+
+			_, err = io.Copy(layerFile, t.TarStream)
+			if err != nil {
+				return fmt.Errorf("error getting layer: %v", err)
+			}
+		}
+
+		return nil
+	}
+
+	tr := tar.NewReader(file)
+	if err := tarball.Walk(*tr, fileWalker); err != nil {
+		return nil, err
+	}
+
+	if layerFile == nil {
+		return nil, fmt.Errorf("file %q not found", layerTarPath)
+	}
+
+	return layerFile, nil
+}
+
+func parseDockerURL(arg string) *ParsedDockerURL {
+	if arg == "" {
+		return nil
+	}
+
 	taglessRemote, tag := parseRepositoryTag(arg)
 	if tag == "" {
 		tag = defaultTag
@@ -132,7 +399,7 @@ func parseDockerURL(arg string) (*ParsedDockerURL, error) {
 		IndexURL:  indexURL,
 		ImageName: imageName,
 		Tag:       tag,
-	}, nil
+	}
 }
 
 func getRepoData(indexURL string, remote string) (*RepoData, error) {
@@ -249,19 +516,12 @@ func getAncestry(imgID, registry string, repoData *RepoData) ([]string, error) {
 	return ancestry, nil
 }
 
-func buildACI(layerID string, repoData *RepoData, dockerURL *ParsedDockerURL, outputDir string, curPwl []string) (string, *schema.ImageManifest, error) {
+func buildACIFromRemote(layerID string, repoData *RepoData, dockerURL *ParsedDockerURL, outputDir string, curPwl []string) (string, *schema.ImageManifest, error) {
 	tmpDir, err := ioutil.TempDir("", "docker2aci-")
 	if err != nil {
 		return "", nil, fmt.Errorf("error creating dir: %v", err)
 	}
 	defer os.RemoveAll(tmpDir)
-
-	layerDest := filepath.Join(tmpDir, "layer")
-	layerRootfs := filepath.Join(layerDest, "rootfs")
-	err = os.MkdirAll(layerRootfs, 0700)
-	if err != nil {
-		return "", nil, fmt.Errorf("error creating dir: %s", layerRootfs)
-	}
 
 	j, size, err := getRemoteImageJSON(layerID, repoData.Endpoints[0], repoData)
 	if err != nil {
@@ -273,6 +533,7 @@ func buildACI(layerID string, repoData *RepoData, dockerURL *ParsedDockerURL, ou
 		return "", nil, fmt.Errorf("error unmarshaling layer data: %v", err)
 	}
 
+	// remove size
 	layer, err := getRemoteLayer(layerID, repoData.Endpoints[0], repoData, int64(size))
 	if err != nil {
 		return "", nil, fmt.Errorf("error getting the remote layer: %v", err)
@@ -291,13 +552,22 @@ func buildACI(layerID string, repoData *RepoData, dockerURL *ParsedDockerURL, ou
 
 	layerFile.Sync()
 
+	aciPath, manifest, err := generateACI(layerData, dockerURL, outputDir, layerFile, curPwl)
+	if err != nil {
+		return "", nil, fmt.Errorf("error generating ACI: %v", err)
+	}
+
+	return aciPath, manifest, nil
+}
+
+func generateACI(layerData DockerImageData, dockerURL *ParsedDockerURL, outputDir string, layerFile *os.File, curPwl []string) (string, *schema.ImageManifest, error) {
 	manifest, err := generateManifest(layerData, dockerURL)
 	if err != nil {
 		return "", nil, fmt.Errorf("error generating the manifest: %v", err)
 	}
 
 	imageName := strings.Replace(dockerURL.ImageName, "/", "-", -1)
-	aciPath := imageName + "-" + layerID
+	aciPath := imageName + "-" + layerData.ID
 	if dockerURL.Tag != "" {
 		aciPath += "-" + dockerURL.Tag
 	}
@@ -518,11 +788,6 @@ func parseDockerUser(dockerUser string) (string, string) {
 }
 
 func writeACI(layer io.ReadSeeker, manifest schema.ImageManifest, curPwl []string, output string) (*schema.ImageManifest, error) {
-	reader, err := aci.NewCompressedTarReader(layer)
-	if err != nil {
-		return nil, err
-	}
-
 	aciFile, err := os.Create(output)
 	if err != nil {
 		return nil, fmt.Errorf("error creating ACI file: %v", err)
@@ -563,10 +828,14 @@ func writeACI(layer io.ReadSeeker, manifest schema.ImageManifest, curPwl []strin
 
 		return nil
 	}
-
-	// Write files in rootfs/
-	if err := tarball.Walk(*reader, convWalker); err != nil {
-		return nil, err
+	reader, err := aci.NewCompressedTarReader(layer)
+	if err == nil {
+		// Write files in rootfs/
+		if err := tarball.Walk(*reader, convWalker); err != nil {
+			return nil, err
+		}
+	} else {
+		// ignore errors
 	}
 	newPwl := subtractWhiteouts(curPwl, whiteouts)
 
