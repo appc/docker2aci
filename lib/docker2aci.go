@@ -675,7 +675,12 @@ func generateManifest(layerData DockerImageData, dockerURL *ParsedDockerURL) (*s
 	dockerConfig := layerData.Config
 	genManifest := &schema.ImageManifest{}
 
-	appURL := dockerURL.IndexURL + "/" + dockerURL.ImageName + "-" + layerData.ID
+	appURL := ""
+	// omit docker hub index URL in app name
+	if dockerURL.IndexURL != defaultIndex {
+		appURL = dockerURL.IndexURL + "/"
+	}
+	appURL += dockerURL.ImageName + "-" + layerData.ID
 	appURL, err := types.SanitizeACName(appURL)
 	if err != nil {
 		return nil, err
