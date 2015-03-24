@@ -5,6 +5,8 @@ layers of a Docker image and squashes them into an ACI image.
 Optionally, it can generate one ACI for each layer setting the correct
 dependencies.
 
+All ACIs generated are compressed with gzip.
+
 ## Examples
 
 ```
