@@ -18,6 +18,8 @@ import (
 	"fmt"
 	"path"
 	"strings"
+
+	"github.com/appc/spec/pkg/acirenderer"
 )
 
 func makeEndpointsList(headers []string) []string {
@@ -44,4 +46,26 @@ func quote(l []string) []string {
 	}
 
 	return quoted
+}
+
+func reverseImages(s acirenderer.Images) acirenderer.Images {
+	var o acirenderer.Images
+	for i := len(s) - 1; i >= 0; i-- {
+		o = append(o, s[i])
+	}
+
+	return o
+}
+
+func in(list []string, el string) bool {
+	return indexOf(list, el) != -1
+}
+
+func indexOf(list []string, el string) int {
+	for i, x := range list {
+		if el == x {
+			return i
+		}
+	}
+	return -1
 }

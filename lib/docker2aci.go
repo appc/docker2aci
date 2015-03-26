@@ -89,8 +89,11 @@ func Convert(dockerURL string, squash bool, outputDir string) ([]string, error) 
 
 	var images acirenderer.Images
 	var aciLayerPaths []string
-	for i, layerID := range ancestry {
-		aciPath, manifest, err := buildACI(layerID, repoData, parsedURL, layersOutputDir)
+	var curPwl []string
+	for i := len(ancestry) - 1; i >= 0; i-- {
+		layerID := ancestry[i]
+
+		aciPath, manifest, err := buildACI(layerID, repoData, parsedURL, layersOutputDir, curPwl)
 		if err != nil {
 			return nil, fmt.Errorf("error building layer: %v\n", err)
 		}
@@ -102,8 +105,11 @@ func Convert(dockerURL string, squash bool, outputDir string) ([]string, error) 
 
 		images = append(images, acirenderer.Image{Im: manifest, Key: key, Level: uint16(i)})
 		aciLayerPaths = append(aciLayerPaths, aciPath)
+		curPwl = manifest.PathWhitelist
 	}
 
+	// acirenderer expects images in order from upper to base layer
+	images = reverseImages(images)
 	if squash {
 		squashedImagePath, err := SquashLayers(images, conversionStore, *parsedURL, outputDir)
 		if err != nil {
@@ -243,7 +249,7 @@ func getAncestry(imgID, registry string, repoData *RepoData) ([]string, error) {
 	return ancestry, nil
 }
 
-func buildACI(layerID string, repoData *RepoData, dockerURL *ParsedDockerURL, outputDir string) (string, *schema.ImageManifest, error) {
+func buildACI(layerID string, repoData *RepoData, dockerURL *ParsedDockerURL, outputDir string, curPwl []string) (string, *schema.ImageManifest, error) {
 	tmpDir, err := ioutil.TempDir("", "docker2aci-")
 	if err != nil {
 		return "", nil, fmt.Errorf("error creating dir: %v", err)
@@ -304,8 +310,8 @@ func buildACI(layerID string, repoData *RepoData, dockerURL *ParsedDockerURL, ou
 	aciPath += ".aci"
 
 	aciPath = path.Join(outputDir, aciPath)
-
-	if err := writeACI(layerFile, *manifest, aciPath); err != nil {
+	manifest, err = writeACI(layerFile, *manifest, curPwl, aciPath)
+	if err != nil {
 		return "", nil, fmt.Errorf("error writing ACI: %v", err)
 	}
 
@@ -511,15 +517,15 @@ func parseDockerUser(dockerUser string) (string, string) {
 	return dockerUserParts[0], dockerUserParts[1]
 }
 
-func writeACI(layer io.ReadSeeker, manifest schema.ImageManifest, output string) error {
+func writeACI(layer io.ReadSeeker, manifest schema.ImageManifest, curPwl []string, output string) (*schema.ImageManifest, error) {
 	reader, err := aci.NewCompressedTarReader(layer)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	aciFile, err := os.Create(output)
 	if err != nil {
-		return fmt.Errorf("error creating ACI file: %v", err)
+		return nil, fmt.Errorf("error creating ACI file: %v", err)
 	}
 	defer aciFile.Close()
 
@@ -528,17 +534,16 @@ func writeACI(layer io.ReadSeeker, manifest schema.ImageManifest, output string)
 	trw := tar.NewWriter(gw)
 	defer trw.Close()
 
-	if err := addMinimalACIStructure(trw, manifest); err != nil {
-		return fmt.Errorf("error writing rootfs entry: %v", err)
-	}
-
+	var whiteouts []string
 	convWalker := func(t *tarball.TarFile) error {
 		name := t.Name()
 		if name == "./" {
 			return nil
 		}
 		t.Header.Name = path.Join("rootfs", name)
+		absolutePath := strings.TrimPrefix(t.Header.Name, "rootfs")
 		if strings.Contains(t.Header.Name, "/.wh.") {
+			whiteouts = append(whiteouts, strings.Replace(absolutePath, ".wh.", "", 1))
 			return nil
 		}
 		if t.Header.Typeflag == tar.TypeLink {
@@ -552,15 +557,36 @@ func writeACI(layer io.ReadSeeker, manifest schema.ImageManifest, output string)
 			return err
 		}
 
+		if !in(curPwl, absolutePath) {
+			curPwl = append(curPwl, absolutePath)
+		}
+
 		return nil
 	}
 
 	// Write files in rootfs/
 	if err := tarball.Walk(*reader, convWalker); err != nil {
-		return err
+		return nil, err
+	}
+	newPwl := subtractWhiteouts(curPwl, whiteouts)
+
+	manifest.PathWhitelist = newPwl
+	if err := addMinimalACIStructure(trw, manifest); err != nil {
+		return nil, fmt.Errorf("error writing rootfs entry: %v", err)
 	}
 
-	return nil
+	return &manifest, nil
+}
+
+func subtractWhiteouts(pathWhitelist []string, whiteouts []string) []string {
+	for _, whiteout := range whiteouts {
+		idx := indexOf(pathWhitelist, whiteout)
+		if idx != -1 {
+			pathWhitelist = append(pathWhitelist[:idx], pathWhitelist[idx+1:]...)
+		}
+	}
+
+	return pathWhitelist
 }
 
 func addMinimalACIStructure(tarWriter *tar.Writer, manifest schema.ImageManifest) error {
@@ -752,6 +778,9 @@ func mergeManifests(manifests []schema.ImageManifest) schema.ImageManifest {
 	nameWithoutLayerID, _ := types.NewACName(stripLayerID(manifest.Name.String()))
 
 	manifest.Name = *nameWithoutLayerID
+
+	// once the image is squashed, we don't need a pathWhitelist
+	manifest.PathWhitelist = nil
 
 	return manifest
 }
