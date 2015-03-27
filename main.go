@@ -22,6 +22,7 @@ import (
 	"strings"
 
 	"github.com/appc/docker2aci/lib"
+	"github.com/appc/docker2aci/lib/util"
 )
 
 const (
@@ -29,15 +30,18 @@ const (
 )
 
 var (
-	flagNoSquash = flag.Bool("nosquash", false, "Don't Squash layers and output every layer as ACI")
-	flagImage    = flag.String("image", "", "When converting a local file, it selects a particuler image to convert. Format: IMAGE_NAME[:TAG]")
+	flagNoSquash = flag.Bool("nosquash", false, "Don't squash layers and output every layer as ACI")
+	flagImage    = flag.String("image", "", "When converting a local file, it selects a particular image to convert. Format: IMAGE_NAME[:TAG]")
+	flagDebug    = flag.Bool("debug", false, "Enables debug messages")
 )
 
-func runDocker2ACI(arg string, flagNoSquash bool, flagImage string) error {
+func runDocker2ACI(arg string, flagNoSquash bool, flagImage string, flagDebug bool) error {
+	if flagDebug {
+		util.InitDebug()
+	}
 	squash := !flagNoSquash
 
 	var aciLayerPaths []string
-	var err error
 	// try to convert a local file
 	u, err := url.Parse(arg)
 	if err != nil {
@@ -50,14 +54,11 @@ func runDocker2ACI(arg string, flagNoSquash bool, flagImage string) error {
 		registryURL := strings.TrimPrefix(arg, "docker://")
 
 		aciLayerPaths, err = docker2aci.Convert(registryURL, squash, ".")
-		if err != nil {
-			return fmt.Errorf("conversion error: %v", err)
-		}
 	} else {
 		aciLayerPaths, err = docker2aci.ConvertFile(flagImage, arg, squash, ".")
-		if err != nil {
-			return fmt.Errorf("conversion error: %v", err)
-		}
+	}
+	if err != nil {
+		return fmt.Errorf("conversion error: %v", err)
 	}
 
 	fmt.Printf("\nGenerated ACI(s):\n")
@@ -89,7 +90,7 @@ func main() {
 		return
 	}
 
-	if err := runDocker2ACI(args[0], *flagNoSquash, *flagImage); err != nil {
+	if err := runDocker2ACI(args[0], *flagNoSquash, *flagImage, *flagDebug); err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		os.Exit(1)
 	}

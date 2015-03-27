@@ -12,33 +12,20 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package docker2aci
+package util
 
 import (
 	"fmt"
-	"path"
+	"io"
+	"os"
 	"strings"
 
 	"github.com/appc/spec/pkg/acirenderer"
 )
 
-func makeEndpointsList(headers []string) []string {
-	var endpoints []string
+var debugEnabled bool
 
-	for _, ep := range headers {
-		endpointsList := strings.Split(ep, ",")
-		for _, endpointEl := range endpointsList {
-			endpoints = append(
-				endpoints,
-				// TODO(iaguis) discover if httpsOrHTTP
-				path.Join(strings.TrimSpace(endpointEl), "v1"))
-		}
-	}
-
-	return endpoints
-}
-
-func quote(l []string) []string {
+func Quote(l []string) []string {
 	var quoted []string
 
 	for _, s := range l {
@@ -48,7 +35,7 @@ func quote(l []string) []string {
 	return quoted
 }
 
-func reverseImages(s acirenderer.Images) acirenderer.Images {
+func ReverseImages(s acirenderer.Images) acirenderer.Images {
 	var o acirenderer.Images
 	for i := len(s) - 1; i >= 0; i-- {
 		o = append(o, s[i])
@@ -57,15 +44,38 @@ func reverseImages(s acirenderer.Images) acirenderer.Images {
 	return o
 }
 
-func in(list []string, el string) bool {
-	return indexOf(list, el) != -1
+func In(list []string, el string) bool {
+	return IndexOf(list, el) != -1
 }
 
-func indexOf(list []string, el string) int {
+func IndexOf(list []string, el string) int {
 	for i, x := range list {
 		if el == x {
 			return i
 		}
 	}
 	return -1
+}
+
+func printTo(w io.Writer, i ...interface{}) {
+	s := fmt.Sprint(i...)
+	fmt.Fprintln(w, strings.TrimSuffix(s, "\n"))
+}
+
+func Warn(i ...interface{}) {
+	printTo(os.Stderr, i...)
+}
+
+func Info(i ...interface{}) {
+	printTo(os.Stdout, i...)
+}
+
+func Debug(i ...interface{}) {
+	if debugEnabled {
+		printTo(os.Stdout, i...)
+	}
+}
+
+func InitDebug() {
+	debugEnabled = true
 }
