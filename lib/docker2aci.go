@@ -40,7 +40,7 @@ import (
 
 type Docker2ACIBackend interface {
 	GetImageInfo(dockerUrl string) ([]string, *types.ParsedDockerURL, error)
-	BuildACI(layerID string, dockerURL *types.ParsedDockerURL, outputDir string, curPWl []string) (string, *schema.ImageManifest, error)
+	BuildACI(layerID string, dockerURL *types.ParsedDockerURL, outputDir string, curPWl []string, compress bool) (string, *schema.ImageManifest, error)
 }
 
 // Convert generates ACI images from docker registry URLs.
@@ -106,7 +106,8 @@ func convertReal(backend Docker2ACIBackend, dockerURL string, squash bool, outpu
 	for i := len(ancestry) - 1; i >= 0; i-- {
 		layerID := ancestry[i]
 
-		aciPath, manifest, err := backend.BuildACI(layerID, parsedDockerURL, layersOutputDir, curPwl)
+		// only compress individual layers if we're not squashing
+		aciPath, manifest, err := backend.BuildACI(layerID, parsedDockerURL, layersOutputDir, curPwl, !squash)
 		if err != nil {
 			return nil, fmt.Errorf("error building layer: %v", err)
 		}
