@@ -17,24 +17,48 @@ package main
 import (
 	"flag"
 	"fmt"
+	"net/url"
 	"os"
+	"strings"
 
 	"github.com/appc/docker2aci/lib"
+	"github.com/appc/docker2aci/lib/util"
 )
 
 const (
 	rocketDir = "/var/lib/rkt"
 )
 
-var flagNoSquash = flag.Bool("nosquash", false, "Don't Squash layers and output every layer as ACI")
+var (
+	flagNoSquash = flag.Bool("nosquash", false, "Don't squash layers and output every layer as ACI")
+	flagImage    = flag.String("image", "", "When converting a local file, it selects a particular image to convert. Format: IMAGE_NAME[:TAG]")
+	flagDebug    = flag.Bool("debug", false, "Enables debug messages")
+)
 
-func runDocker2ACI(arg string, flagNoSquash bool) error {
+func runDocker2ACI(arg string, flagNoSquash bool, flagImage string, flagDebug bool) error {
+	if flagDebug {
+		util.InitDebug()
+	}
 	squash := !flagNoSquash
 
-	aciLayerPaths, err := docker2aci.Convert(arg, squash, ".")
+	var aciLayerPaths []string
+	// try to convert a local file
+	u, err := url.Parse(arg)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Conversion error: %v\n", err)
-		return err
+		return fmt.Errorf("error parsing argument: %v", err)
+	}
+	if u.Scheme == "docker" {
+		if flagImage != "" {
+			return fmt.Errorf("flag --image works only with files.")
+		}
+		registryURL := strings.TrimPrefix(arg, "docker://")
+
+		aciLayerPaths, err = docker2aci.Convert(registryURL, squash, ".")
+	} else {
+		aciLayerPaths, err = docker2aci.ConvertFile(flagImage, arg, squash, ".")
+	}
+	if err != nil {
+		return fmt.Errorf("conversion error: %v", err)
 	}
 
 	fmt.Printf("\nGenerated ACI(s):\n")
@@ -45,16 +69,29 @@ func runDocker2ACI(arg string, flagNoSquash bool) error {
 	return nil
 }
 
+func usage() {
+	fmt.Fprintf(os.Stderr, "Usage of %s:\n", os.Args[0])
+	fmt.Fprintf(os.Stderr, "docker2aci [--debug] [--nosquash] IMAGE\n")
+	fmt.Fprintf(os.Stderr, "  Where IMAGE is\n")
+	fmt.Fprintf(os.Stderr, "    [--image=IMAGE_NAME[:TAG]] FILEPATH\n")
+	fmt.Fprintf(os.Stderr, "  or\n")
+	fmt.Fprintf(os.Stderr, "    docker://[REGISTRYURL/]IMAGE_NAME[:TAG]\n")
+	fmt.Fprintf(os.Stderr, "Flags:\n")
+	flag.PrintDefaults()
+}
+
 func main() {
+	flag.Usage = usage
 	flag.Parse()
 	args := flag.Args()
 
-	if len(args) != 1 {
-		fmt.Println("Usage: docker2aci [--nosquash] [REGISTRYURL/]IMAGE_NAME[:TAG]")
+	if len(args) < 1 {
+		usage()
 		return
 	}
 
-	if err := runDocker2ACI(args[0], *flagNoSquash); err != nil {
+	if err := runDocker2ACI(args[0], *flagNoSquash, *flagImage, *flagDebug); err != nil {
+		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		os.Exit(1)
 	}
 }
