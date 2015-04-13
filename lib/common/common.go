@@ -44,7 +44,7 @@ func ParseDockerURL(arg string) *types.ParsedDockerURL {
 	}
 }
 
-func GenerateACI(layerData types.DockerImageData, dockerURL *types.ParsedDockerURL, outputDir string, layerFile *os.File, curPwl []string) (string, *schema.ImageManifest, error) {
+func GenerateACI(layerData types.DockerImageData, dockerURL *types.ParsedDockerURL, outputDir string, layerFile *os.File, curPwl []string, compress bool) (string, *schema.ImageManifest, error) {
 	manifest, err := GenerateManifest(layerData, dockerURL)
 	if err != nil {
 		return "", nil, fmt.Errorf("error generating the manifest: %v", err)
@@ -64,7 +64,7 @@ func GenerateACI(layerData types.DockerImageData, dockerURL *types.ParsedDockerU
 	aciPath += ".aci"
 
 	aciPath = path.Join(outputDir, aciPath)
-	manifest, err = writeACI(layerFile, *manifest, curPwl, aciPath)
+	manifest, err = writeACI(layerFile, *manifest, curPwl, aciPath, compress)
 	if err != nil {
 		return "", nil, fmt.Errorf("error writing ACI: %v", err)
 	}
@@ -183,16 +183,19 @@ func GenerateManifest(layerData types.DockerImageData, dockerURL *types.ParsedDo
 	return genManifest, nil
 }
 
-func writeACI(layer io.ReadSeeker, manifest schema.ImageManifest, curPwl []string, output string) (*schema.ImageManifest, error) {
+func writeACI(layer io.ReadSeeker, manifest schema.ImageManifest, curPwl []string, output string, compress bool) (*schema.ImageManifest, error) {
 	aciFile, err := os.Create(output)
 	if err != nil {
 		return nil, fmt.Errorf("error creating ACI file: %v", err)
 	}
 	defer aciFile.Close()
 
-	gw := gzip.NewWriter(aciFile)
-	defer gw.Close()
-	trw := tar.NewWriter(gw)
+	var w io.WriteCloser = aciFile
+	if compress {
+		w = gzip.NewWriter(aciFile)
+		defer w.Close()
+	}
+	trw := tar.NewWriter(w)
 	defer trw.Close()
 
 	if err := WriteRootfsDir(trw); err != nil {
