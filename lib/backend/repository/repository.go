@@ -156,7 +156,11 @@ func (rb *RepositoryBackend) getRepoData(indexURL string, remote string) (*RepoD
 
 func getImageIDFromTag(registry string, appName string, tag string, repoData *RepoData) (string, error) {
 	client := &http.Client{}
-	req, err := http.NewRequest("GET", "https://"+path.Join(registry, "repositories", appName, "tags", tag), nil)
+	// we get all the tags instead of directly getting the imageID of the
+	// requested one (.../tags/TAG) because even though it's specified in the
+	// Docker API, some registries (e.g. Google Container Registry) don't
+	// implement it.
+	req, err := http.NewRequest("GET", "https://"+path.Join(registry, "repositories", appName, "tags"), nil)
 	if err != nil {
 		return "", fmt.Errorf("failed to get Image ID: %s, URL: %s", err, req.URL)
 	}
@@ -179,10 +183,15 @@ func getImageIDFromTag(registry string, appName string, tag string, repoData *Re
 		return "", err
 	}
 
-	var imageID string
+	var tags map[string]string
 
-	if err := json.Unmarshal(j, &imageID); err != nil {
+	if err := json.Unmarshal(j, &tags); err != nil {
 		return "", fmt.Errorf("error unmarshaling: %v", err)
+	}
+
+	imageID, ok := tags[tag]
+	if !ok {
+		return "", fmt.Errorf("tag %s not found", tag)
 	}
 
 	return imageID, nil
