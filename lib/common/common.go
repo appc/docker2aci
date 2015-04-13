@@ -35,7 +35,7 @@ func ParseDockerURL(arg string) *types.ParsedDockerURL {
 	if tag == "" {
 		tag = defaultTag
 	}
-	indexURL, imageName := splitReposName(taglessRemote)
+	indexURL, imageName := SplitReposName(taglessRemote)
 
 	return &types.ParsedDockerURL{
 		IndexURL:  indexURL,
