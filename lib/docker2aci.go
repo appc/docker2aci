@@ -53,9 +53,10 @@ type Docker2ACIBackend interface {
 // If the squash flag is true, it squashes all the layers in one file and
 // places this file in outputDir; if it is false, it places every layer in its
 // own ACI in outputDir.
+// username and password can be passed if the image needs authentication.
 // It returns the list of generated ACI paths.
-func Convert(dockerURL string, squash bool, outputDir string) ([]string, error) {
-	repositoryBackend := repository.NewRepositoryBackend()
+func Convert(dockerURL string, squash bool, outputDir string, username string, password string) ([]string, error) {
+	repositoryBackend := repository.NewRepositoryBackend(username, password)
 	return convertReal(repositoryBackend, dockerURL, squash, outputDir)
 }
 
@@ -80,6 +81,18 @@ func ConvertFile(dockerURL string, filePath string, squash bool, outputDir strin
 
 	fileBackend := file.NewFileBackend(f)
 	return convertReal(fileBackend, dockerURL, squash, outputDir)
+}
+
+// GetIndexName returns the docker index server from a docker URL.
+func GetIndexName(dockerURL string) string {
+	index, _ := common.SplitReposName(dockerURL)
+	return index
+}
+
+// GetDockercfgAuth reads a ~/.dockercfg file and returns the username and password
+// of the given docker index server.
+func GetDockercfgAuth(indexServer string) (string, string, error) {
+	return common.GetAuthInfo(indexServer)
 }
 
 func convertReal(backend Docker2ACIBackend, dockerURL string, squash bool, outputDir string) ([]string, error) {

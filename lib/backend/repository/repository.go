@@ -25,15 +25,20 @@ type RepoData struct {
 
 type RepositoryBackend struct {
 	repoData *RepoData
+	username string
+	password string
 }
 
-func NewRepositoryBackend() *RepositoryBackend {
-	return &RepositoryBackend{}
+func NewRepositoryBackend(username string, password string) *RepositoryBackend {
+	return &RepositoryBackend{
+		username: username,
+		password: password,
+	}
 }
 
 func (rb *RepositoryBackend) GetImageInfo(url string) ([]string, *types.ParsedDockerURL, error) {
 	dockerURL := common.ParseDockerURL(url)
-	repoData, err := getRepoData(dockerURL.IndexURL, dockerURL.ImageName)
+	repoData, err := rb.getRepoData(dockerURL.IndexURL, dockerURL.ImageName)
 	if err != nil {
 		return nil, nil, fmt.Errorf("error getting repository data: %v", err)
 	}
@@ -99,7 +104,7 @@ func (rb *RepositoryBackend) BuildACI(layerID string, dockerURL *types.ParsedDoc
 	return aciPath, manifest, nil
 }
 
-func getRepoData(indexURL string, remote string) (*RepoData, error) {
+func (rb *RepositoryBackend) getRepoData(indexURL string, remote string) (*RepoData, error) {
 	client := &http.Client{}
 	repositoryURL := "https://" + path.Join(indexURL, "v1", "repositories", remote, "images")
 
@@ -108,7 +113,10 @@ func getRepoData(indexURL string, remote string) (*RepoData, error) {
 		return nil, err
 	}
 
-	// TODO(iaguis) add auth?
+	if rb.username != "" && rb.password != "" {
+		req.SetBasicAuth(rb.username, rb.password)
+	}
+
 	req.Header.Set("X-Docker-Token", "true")
 
 	res, err := client.Do(req)

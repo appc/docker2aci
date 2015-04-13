@@ -51,9 +51,17 @@ func runDocker2ACI(arg string, flagNoSquash bool, flagImage string, flagDebug bo
 		if flagImage != "" {
 			return fmt.Errorf("flag --image works only with files.")
 		}
-		registryURL := strings.TrimPrefix(arg, "docker://")
+		dockerURL := strings.TrimPrefix(arg, "docker://")
 
-		aciLayerPaths, err = docker2aci.Convert(registryURL, squash, ".")
+		indexServer := docker2aci.GetIndexName(dockerURL)
+
+		var username, password string
+		username, password, err = docker2aci.GetDockercfgAuth(indexServer)
+		if err != nil {
+			return fmt.Errorf("error reading .dockercfg file: %v", err)
+		}
+
+		aciLayerPaths, err = docker2aci.Convert(dockerURL, squash, ".", username, password)
 	} else {
 		aciLayerPaths, err = docker2aci.ConvertFile(flagImage, arg, squash, ".")
 	}
