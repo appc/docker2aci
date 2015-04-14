@@ -25,10 +25,6 @@ import (
 	"github.com/appc/docker2aci/lib/util"
 )
 
-const (
-	rocketDir = "/var/lib/rkt"
-)
-
 var (
 	flagNoSquash = flag.Bool("nosquash", false, "Don't squash layers and output every layer as ACI")
 	flagImage    = flag.String("image", "", "When converting a local file, it selects a particular image to convert. Format: IMAGE_NAME[:TAG]")
