@@ -109,10 +109,7 @@ func GenerateManifest(layerData types.DockerImageData, dockerURL *types.ParsedDo
 	if err != nil {
 		return nil, err
 	}
-	name, err := appctypes.NewACName(appURL)
-	if err != nil {
-		return nil, err
-	}
+	name := appctypes.MustACName(appURL)
 	genManifest.Name = *name
 
 	acVersion, err := appctypes.NewSemVer(schemaVersion)
@@ -126,20 +123,20 @@ func GenerateManifest(layerData types.DockerImageData, dockerURL *types.ParsedDo
 	var labels appctypes.Labels
 	var parentLabels appctypes.Labels
 
-	layer, _ := appctypes.NewACName("layer")
+	layer := appctypes.MustACName("layer")
 	labels = append(labels, appctypes.Label{Name: *layer, Value: layerData.ID})
 
 	tag := dockerURL.Tag
-	version, _ := appctypes.NewACName("version")
+	version := appctypes.MustACName("version")
 	labels = append(labels, appctypes.Label{Name: *version, Value: tag})
 
 	if layerData.OS != "" {
-		os, _ := appctypes.NewACName("os")
+		os := appctypes.MustACName("os")
 		labels = append(labels, appctypes.Label{Name: *os, Value: layerData.OS})
 		parentLabels = append(parentLabels, appctypes.Label{Name: *os, Value: layerData.OS})
 
 		if layerData.Architecture != "" {
-			arch, _ := appctypes.NewACName("arch")
+			arch := appctypes.MustACName("arch")
 			parentLabels = append(parentLabels, appctypes.Label{Name: *arch, Value: layerData.Architecture})
 		}
 	}
@@ -172,10 +169,7 @@ func GenerateManifest(layerData types.DockerImageData, dockerURL *types.ParsedDo
 		if err != nil {
 			return nil, err
 		}
-		parentAppName, err := appctypes.NewACName(parentAppNameString)
-		if err != nil {
-			return nil, err
-		}
+		parentAppName := appctypes.MustACName(parentAppNameString)
 
 		genManifest.Dependencies = append(genManifest.Dependencies, appctypes.Dependency{App: *parentAppName, Labels: parentLabels})
 	}
