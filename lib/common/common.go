@@ -159,21 +159,13 @@ func GenerateManifest(layerData types.DockerImageData, dockerURL *types.ParsedDo
 				Environment:      env,
 				WorkingDirectory: dockerConfig.WorkingDir,
 			}
-			genManifest.App = app
 
-			for p := range dockerConfig.Volumes {
-				n := filepath.Join("volume-", p)
-				sn, err := appctypes.SanitizeACName(n)
-				if err != nil {
-					return nil, err
-				}
-				mp := appctypes.MountPoint{
-					Name: *appctypes.MustACName(sn),
-					Path: p,
-				}
-
-				genManifest.App.MountPoints = append(genManifest.App.MountPoints, mp)
+			app.MountPoints, err = convertVolumesToMPs(dockerConfig.Volumes)
+			if err != nil {
+				return nil, err
 			}
+
+			genManifest.App = app
 		}
 	}
 
@@ -189,6 +181,27 @@ func GenerateManifest(layerData types.DockerImageData, dockerURL *types.ParsedDo
 	}
 
 	return genManifest, nil
+}
+
+func convertVolumesToMPs(dockerVolumes map[string]struct{}) ([]appctypes.MountPoint, error) {
+	mps := []appctypes.MountPoint{}
+
+	for p := range dockerVolumes {
+		n := filepath.Join("volume-", p)
+		sn, err := appctypes.SanitizeACName(n)
+		if err != nil {
+			return nil, err
+		}
+
+		mp := appctypes.MountPoint{
+			Name: *appctypes.MustACName(sn),
+			Path: p,
+		}
+
+		mps = append(mps, mp)
+	}
+
+	return mps, nil
 }
 
 func writeACI(layer io.ReadSeeker, manifest schema.ImageManifest, curPwl []string, output string, compress bool) (*schema.ImageManifest, error) {
