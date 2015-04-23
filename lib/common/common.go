@@ -185,12 +185,21 @@ func GenerateManifest(layerData types.DockerImageData, dockerURL *types.ParsedDo
 
 func convertVolumesToMPs(dockerVolumes map[string]struct{}) ([]appctypes.MountPoint, error) {
 	mps := []appctypes.MountPoint{}
+	dup := make(map[string]int)
 
 	for p := range dockerVolumes {
 		n := filepath.Join("volume-", p)
 		sn, err := appctypes.SanitizeACName(n)
 		if err != nil {
 			return nil, err
+		}
+
+		// check for duplicate names
+		if i, ok := dup[sn]; ok {
+			dup[sn] = i + 1
+			sn = fmt.Sprintf("%s-%d", sn, i)
+		} else {
+			dup[sn] = 1
 		}
 
 		mp := appctypes.MountPoint{
