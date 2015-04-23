@@ -23,6 +23,9 @@ import (
 
 	"github.com/appc/docker2aci/lib"
 	"github.com/appc/docker2aci/lib/util"
+
+	"github.com/appc/spec/aci"
+	"github.com/appc/spec/schema/types"
 )
 
 var (
@@ -65,12 +68,54 @@ func runDocker2ACI(arg string, flagNoSquash bool, flagImage string, flagDebug bo
 		return fmt.Errorf("conversion error: %v", err)
 	}
 
+	// we print last layer's converted volumes, this will include all the
+	// volumes in the previous layers. If we're squashing, the last element of
+	// aciLayerPaths will be the squashed image.
+	if err := printConvertedVolumes(aciLayerPaths[len(aciLayerPaths)-1]); err != nil {
+		return err
+	}
+
 	fmt.Printf("\nGenerated ACI(s):\n")
 	for _, aciFile := range aciLayerPaths {
 		fmt.Println(aciFile)
 	}
 
 	return nil
+}
+
+func printConvertedVolumes(aciPath string) error {
+	mps, err := getMountPoints(aciPath)
+	if err != nil {
+		return err
+	}
+
+	if len(mps) > 0 {
+		fmt.Printf("\nConverted volumes:\n")
+		for _, mp := range mps {
+			fmt.Printf("\tname: %q, path: %q, readOnly: %v\n", mp.Name, mp.Path, mp.ReadOnly)
+		}
+	}
+
+	return nil
+}
+
+func getMountPoints(aciPath string) ([]types.MountPoint, error) {
+	f, err := os.Open(aciPath)
+	if err != nil {
+		return nil, fmt.Errorf("error opening converted image: %v", err)
+	}
+	defer f.Close()
+
+	manifest, err := aci.ManifestFromImage(f)
+	if err != nil {
+		return nil, fmt.Errorf("error reading manifest from converted image: %v", err)
+	}
+
+	if manifest.App != nil && manifest.App.MountPoints != nil {
+		return manifest.App.MountPoints, nil
+	}
+
+	return []types.MountPoint{}, nil
 }
 
 func usage() {

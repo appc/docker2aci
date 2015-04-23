@@ -8,7 +8,17 @@ the correct dependencies.
 
 All ACIs generated are compressed with gzip.
 
-[aci]: https://github.com/appc/spec/blob/master/SPEC.md#app-container-image
+
+## Volumes
+
+Docker Volumes get converted to mountPoints in the
+[Image Manifest Schema][imageschema]. Since mountPoints need a name and Docker
+Volumes don't, docker2aci generates a name by appending the path to `volume-`.
+That is, if a Volume has `/var/tmp` as path, the resulting mountPoint name will
+be `volume-/var/tmp`.
+
+When the docker2aci CLI binary converts a Docker Volume to a mountPoint it will
+print its name, path and whether it is read-only or not.
 
 ## CLI examples
 
@@ -51,3 +61,34 @@ Extracting layer: 2103b00b3fdf1d26a86aded36ae73c1c425def0f779a6e69073b3b77377df3
 Generated ACI(s):
 ubuntu-latest.aci
 ```
+
+```
+$ ./docker2aci docker://redis
+Downloading layer: 511136ea3c5a64f264b78b5433614aec563103b4d4702f3ba7d4d2698e22c158
+Downloading layer: 4f903438061c7180cf99485b42f7709f5268bfb4732fe885f9104ed3bb66fd3c
+Downloading layer: 1265e16d0c286a4252c1dc5e775ba476d9560e2dd96d2032605ee75b30912f6b
+Downloading layer: 33b9d52d008c40bd2882f516490c449a85b706055421c13b0216b510c3d1fda0
+Downloading layer: 50d092d7db086395c16392b42c10e33587206b03b0f3bf886dcd78eeadf07c15
+Downloading layer: 1aa2ba847d032325c235f15837a78cdf1d48dac59c1ca036f04c982d76a4348d
+Downloading layer: e7fddb6710b0e122e24f880f0560c4d42655511a37c70dfcfe21aabc55bc86b0
+Downloading layer: 2dc7687bd0785d28a438bf9bca208d082d066915e2e388b08aeb6bcc82084a3e
+Downloading layer: c157a6ecc09ce072beac268c3a3e277aec11aef26b4b7ecb616aebec5d249ec5
+Downloading layer: 96b7fa01060d1d6ed52db4fea29c600a0a8bd8c1b75c119eb60a85114ad6c110
+Downloading layer: 607eb184411289059954fec63a321ef6408958d52efbf97966fb134b7cbeccca
+Downloading layer: a8beffce6b07225b9dfc2458c049e901cb748c1b58a6130a493fba2fd35b6b9e
+Downloading layer: b23ebc9e057634e7b402bb63ca835483796ecf60efd2e94be8eb45d0756851d0
+Downloading layer: c817c8c769d0120041f428a89ae270d4b616f8eed760b1cc96b0efaecd5e78d8
+Downloading layer: 19682c2cca49564c691ac06052de49f61d5bdf16c9203cf83b123903a6f052eb
+Downloading layer: 4a418129851356d0f07dc8be4455c3f8a15d11ac4bb3410eb799a647da6832ba
+Downloading layer: d47fc7449244382dc6121e68100a2c677f4964b495c5bdbbe2975be21777151e
+Downloading layer: f2fb89b0a711a7178528c7785d247ba3572924353b0d5e23e9b28f0518253b22
+
+Converted volumes:
+    name: "volume-/data", path: "/data", readOnly: false
+
+Generated ACI(s):
+redis-latest.aci
+```
+
+[aci]: https://github.com/appc/spec/blob/master/SPEC.md#app-container-image
+[imageschema]: https://github.com/appc/spec/blob/master/SPEC.md#image-manifest-schema
