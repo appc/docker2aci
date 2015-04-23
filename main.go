@@ -68,10 +68,11 @@ func runDocker2ACI(arg string, flagNoSquash bool, flagImage string, flagDebug bo
 		return fmt.Errorf("conversion error: %v", err)
 	}
 
-	if squash {
-		if err := printConvertedVolumes(aciLayerPaths[0]); err != nil {
-			return err
-		}
+	// we print last layer's converted volumes, this will include all the
+	// volumes in the previous layers. If we're squashing, the last element of
+	// aciLayerPaths will be the squashed image.
+	if err := printConvertedVolumes(aciLayerPaths[len(aciLayerPaths)-1]); err != nil {
+		return err
 	}
 
 	fmt.Printf("\nGenerated ACI(s):\n")
