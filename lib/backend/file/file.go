@@ -204,7 +204,7 @@ func getTarFileBytes(file *os.File, path string) ([]byte, error) {
 }
 
 func extractEmbeddedLayer(file *os.File, layerID string, outputPath string) (*os.File, error) {
-	util.Info("Extracting layer: ", layerID, "\n")
+	util.Info("Extracting ", layerID[:12], "\n")
 
 	_, err := file.Seek(0, 0)
 	if err != nil {
