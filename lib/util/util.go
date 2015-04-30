@@ -20,7 +20,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/appc/spec/pkg/acirenderer"
+	"github.com/appc/docker2aci/Godeps/_workspace/src/github.com/appc/spec/pkg/acirenderer"
 )
 
 var debugEnabled bool

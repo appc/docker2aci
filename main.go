@@ -24,8 +24,8 @@ import (
 	"github.com/appc/docker2aci/lib"
 	"github.com/appc/docker2aci/lib/util"
 
-	"github.com/appc/spec/aci"
-	"github.com/appc/spec/schema/types"
+	"github.com/appc/docker2aci/Godeps/_workspace/src/github.com/appc/spec/aci"
+	"github.com/appc/docker2aci/Godeps/_workspace/src/github.com/appc/spec/schema/types"
 )
 
 var (
