@@ -11,10 +11,10 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/appc/docker2aci/Godeps/_workspace/src/github.com/appc/spec/schema"
 	"github.com/appc/docker2aci/lib/common"
 	"github.com/appc/docker2aci/lib/types"
 	"github.com/appc/docker2aci/lib/util"
+	"github.com/appc/spec/schema"
 )
 
 type RepoData struct {
