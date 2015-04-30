@@ -9,6 +9,19 @@ the correct dependencies.
 All ACIs generated are compressed with gzip.
 
 
+## Build
+
+Installation is simple as:
+
+	go get github.com/appc/docker2aci
+
+or as involved as:
+
+	git clone git://github.com/appc/docker2aci
+	cd docker2aci
+	go get -d ./...
+	go build
+
 ## Volumes
 
 Docker Volumes get converted to mountPoints in the
@@ -23,7 +36,7 @@ print its name, path and whether it is read-only or not.
 ## CLI examples
 
 ```
-$ ./docker2aci docker://busybox
+$ docker2aci docker://busybox
 Downloading layer: 511136ea3c5a64f264b78b5433614aec563103b4d4702f3ba7d4d2698e22c158
 Downloading layer: df7546f9f060a2268024c8a230d8639878585defcc1bc6f79d2728a13957871b
 Downloading layer: ea13149945cb6b1e746bf28032f02e9b5a793523481a0a18645fc77ad53c4ea2
@@ -34,7 +47,7 @@ library-busybox-latest.aci
 ```
 
 ```
-$ ./docker2aci --nosquash docker://quay.io/coreos/etcd:latest
+$ docker2aci --nosquash docker://quay.io/coreos/etcd:latest
 Downloading layer: 3c79dd31bf84b2fb7c55354f5069964a72bb6ae0c1263331c0f83ce4c32a4b6a
 Downloading layer: 8423185475fe5bb0c86dc98ba2816ca9cc29cbf3ec5f3ec091963854746ee131
 Downloading layer: 185eec9979eb1288f1412ec997860d3c865ac6a9e5c71487d9876bc0ec7bbdfe
@@ -51,7 +64,7 @@ coreos-etcd-c5f34efc44466ec7abb9a68af20d2f876ea691095747e7e5a62e890cdedadcdc-lat
 
 ```
 $ docker save -o ubuntu.docker ubuntu
-$ ./docker2aci ubuntu.docker
+$ docker2aci ubuntu.docker
 Extracting layer: 511136ea3c5a64f264b78b5433614aec563103b4d4702f3ba7d4d2698e22c158
 Extracting layer: f0dde87450ec8236a64aebd3e8b499fe2772fca5e837ecbfa97bd8ae380c605e
 Extracting layer: 76b658ecb5644a4aca23b35de695803ad2e223da087d4f8015016021bd970169
@@ -63,7 +76,7 @@ ubuntu-latest.aci
 ```
 
 ```
-$ ./docker2aci docker://redis
+$ docker2aci docker://redis
 Downloading layer: 511136ea3c5a64f264b78b5433614aec563103b4d4702f3ba7d4d2698e22c158
 Downloading layer: 4f903438061c7180cf99485b42f7709f5268bfb4732fe885f9104ed3bb66fd3c
 Downloading layer: 1265e16d0c286a4252c1dc5e775ba476d9560e2dd96d2032605ee75b30912f6b
