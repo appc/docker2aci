@@ -5,12 +5,13 @@ import (
 	"compress/gzip"
 	"encoding/json"
 	"fmt"
-	"github.com/appc/docker2aci/tarball"
 	"io"
 	"os"
 	"path"
 	"path/filepath"
 	"time"
+
+	"github.com/appc/docker2aci/tarball"
 
 	"strings"
 
@@ -120,8 +121,11 @@ func GenerateManifest(layerData types.DockerImageData, dockerURL *types.ParsedDo
 
 	genManifest.ACKind = appctypes.ACKind(schema.ImageManifestKind)
 
-	var labels appctypes.Labels
-	var parentLabels appctypes.Labels
+	var (
+		labels       appctypes.Labels
+		parentLabels appctypes.Labels
+		annotations  appctypes.Annotations
+	)
 
 	layer := appctypes.MustACName("layer")
 	labels = append(labels, appctypes.Label{Name: *layer, Value: layerData.ID})
@@ -141,7 +145,22 @@ func GenerateManifest(layerData types.DockerImageData, dockerURL *types.ParsedDo
 		}
 	}
 
+	if layerData.Author != "" {
+		authorsKey := appctypes.MustACName("authors")
+		annotations = append(annotations, appctypes.Annotation{Name: *authorsKey, Value: layerData.Author})
+	}
+	epoch := time.Unix(0, 0)
+	if !layerData.Created.Equal(epoch) {
+		createdKey := appctypes.MustACName("created")
+		annotations = append(annotations, appctypes.Annotation{Name: *createdKey, Value: layerData.Created.Format(time.RFC3339)})
+	}
+	if layerData.Comment != "" {
+		commentKey := appctypes.MustACName("docker/comment")
+		annotations = append(annotations, appctypes.Annotation{Name: *commentKey, Value: layerData.Comment})
+	}
+
 	genManifest.Labels = labels
+	genManifest.Annotations = annotations
 
 	if dockerConfig != nil {
 		exec := getExecCommand(dockerConfig.Entrypoint, dockerConfig.Cmd)
