@@ -336,8 +336,22 @@ func parseDockerUser(dockerUser string) (string, string) {
 }
 
 func subtractWhiteouts(pathWhitelist []string, whiteouts []string) []string {
-	for _, whiteout := range whiteouts {
-		idx := util.IndexOf(pathWhitelist, whiteout)
+	matchPaths := []string{}
+	for _, path := range pathWhitelist {
+		// If one of the parent dirs of the current path matches the
+		// whiteout then also this path should be removed
+		curPath := path
+		for curPath != "/" {
+			for _, whiteout := range whiteouts {
+				if curPath == whiteout {
+					matchPaths = append(matchPaths, path)
+				}
+			}
+			curPath = filepath.Dir(curPath)
+		}
+	}
+	for _, matchPath := range matchPaths {
+		idx := util.IndexOf(pathWhitelist, matchPath)
 		if idx != -1 {
 			pathWhitelist = append(pathWhitelist[:idx], pathWhitelist[idx+1:]...)
 		}
