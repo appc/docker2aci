@@ -302,7 +302,7 @@ func getLayer(imgID, registry string, repoData *RepoData, imgSize int64, tmpDir 
 	progressReader := &ioprogress.Reader{
 		Reader:       res.Body,
 		Size:         imgSize,
-		DrawFunc:     ioprogress.DrawTerminalf(os.Stdout, fmtfunc),
+		DrawFunc:     ioprogress.DrawTerminalf(os.Stderr, fmtfunc),
 		DrawInterval: 500 * time.Millisecond,
 	}
 
