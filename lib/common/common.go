@@ -189,14 +189,14 @@ func GenerateManifest(layerData types.DockerImageData, dockerURL *types.ParsedDo
 	}
 
 	if layerData.Parent != "" {
-		parentAppNameString := dockerURL.IndexURL + "/" + dockerURL.ImageName + "-" + layerData.Parent
-		parentAppNameString, err := appctypes.SanitizeACName(parentAppNameString)
+		parentImageNameString := dockerURL.IndexURL + "/" + dockerURL.ImageName + "-" + layerData.Parent
+		parentImageNameString, err := appctypes.SanitizeACName(parentImageNameString)
 		if err != nil {
 			return nil, err
 		}
-		parentAppName := appctypes.MustACName(parentAppNameString)
+		parentImageName := appctypes.MustACName(parentImageNameString)
 
-		genManifest.Dependencies = append(genManifest.Dependencies, appctypes.Dependency{App: *parentAppName, Labels: parentLabels})
+		genManifest.Dependencies = append(genManifest.Dependencies, appctypes.Dependency{ImageName: *parentImageName, Labels: parentLabels})
 	}
 
 	return genManifest, nil
