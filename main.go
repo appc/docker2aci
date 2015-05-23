@@ -60,9 +60,9 @@ func runDocker2ACI(arg string, flagNoSquash bool, flagImage string, flagDebug bo
 			return fmt.Errorf("error reading .dockercfg file: %v", err)
 		}
 
-		aciLayerPaths, err = docker2aci.Convert(dockerURL, squash, ".", username, password)
+		aciLayerPaths, err = docker2aci.Convert(dockerURL, squash, ".", os.TempDir(), username, password)
 	} else {
-		aciLayerPaths, err = docker2aci.ConvertFile(flagImage, arg, squash, ".")
+		aciLayerPaths, err = docker2aci.ConvertFile(flagImage, arg, squash, ".", os.TempDir())
 	}
 	if err != nil {
 		return fmt.Errorf("conversion error: %v", err)
