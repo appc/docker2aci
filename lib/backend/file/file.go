@@ -44,8 +44,8 @@ func (lb *FileBackend) GetImageInfo(dockerURL string) ([]string, *types.ParsedDo
 	return ancestry, parsedDockerURL, nil
 }
 
-func (lb *FileBackend) BuildACI(layerID string, dockerURL *types.ParsedDockerURL, outputDir string, curPwl []string, compress bool) (string, *schema.ImageManifest, error) {
-	tmpDir, err := ioutil.TempDir("", "docker2aci-")
+func (lb *FileBackend) BuildACI(layerID string, dockerURL *types.ParsedDockerURL, outputDir string, tmpBaseDir string, curPwl []string, compress bool) (string, *schema.ImageManifest, error) {
+	tmpDir, err := ioutil.TempDir(tmpBaseDir, "docker2aci-")
 	if err != nil {
 		return "", nil, fmt.Errorf("error creating dir: %v", err)
 	}
