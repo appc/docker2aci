@@ -25,7 +25,7 @@ import (
 	"github.com/appc/docker2aci/lib/util"
 
 	"github.com/appc/spec/aci"
-	"github.com/appc/spec/schema/types"
+	"github.com/appc/spec/schema"
 )
 
 var (
@@ -68,10 +68,18 @@ func runDocker2ACI(arg string, flagNoSquash bool, flagImage string, flagDebug bo
 		return fmt.Errorf("conversion error: %v", err)
 	}
 
-	// we print last layer's converted volumes, this will include all the
-	// volumes in the previous layers. If we're squashing, the last element of
-	// aciLayerPaths will be the squashed image.
-	if err := printConvertedVolumes(aciLayerPaths[len(aciLayerPaths)-1]); err != nil {
+	// we get last layer's manifest, this will include all the elements in the
+	// previous layers. If we're squashing, the last element of aciLayerPaths
+	// will be the squashed image.
+	manifest, err := getManifest(aciLayerPaths[len(aciLayerPaths)-1])
+	if err != nil {
+		return err
+	}
+
+	if err := printConvertedVolumes(*manifest); err != nil {
+		return err
+	}
+	if err := printConvertedPorts(*manifest); err != nil {
 		return err
 	}
 
@@ -83,23 +91,36 @@ func runDocker2ACI(arg string, flagNoSquash bool, flagImage string, flagDebug bo
 	return nil
 }
 
-func printConvertedVolumes(aciPath string) error {
-	mps, err := getMountPoints(aciPath)
-	if err != nil {
-		return err
-	}
-
-	if len(mps) > 0 {
-		fmt.Printf("\nConverted volumes:\n")
-		for _, mp := range mps {
-			fmt.Printf("\tname: %q, path: %q, readOnly: %v\n", mp.Name, mp.Path, mp.ReadOnly)
+func printConvertedVolumes(manifest schema.ImageManifest) error {
+	if manifest.App != nil && manifest.App.MountPoints != nil {
+		mps := manifest.App.MountPoints
+		if len(mps) > 0 {
+			fmt.Printf("\nConverted volumes:\n")
+			for _, mp := range mps {
+				fmt.Printf("\tname: %q, path: %q, readOnly: %v\n", mp.Name, mp.Path, mp.ReadOnly)
+			}
 		}
 	}
 
 	return nil
 }
 
-func getMountPoints(aciPath string) ([]types.MountPoint, error) {
+func printConvertedPorts(manifest schema.ImageManifest) error {
+	if manifest.App != nil && manifest.App.Ports != nil {
+		ports := manifest.App.Ports
+		if len(ports) > 0 {
+			fmt.Printf("\nConverted ports:\n")
+			for _, port := range ports {
+				fmt.Printf("\tname: %q, protocol: %q, port: %v, count: %v, socketActivated: %v\n",
+					port.Name, port.Protocol, port.Port, port.Count, port.SocketActivated)
+			}
+		}
+	}
+
+	return nil
+}
+
+func getManifest(aciPath string) (*schema.ImageManifest, error) {
 	f, err := os.Open(aciPath)
 	if err != nil {
 		return nil, fmt.Errorf("error opening converted image: %v", err)
@@ -111,11 +132,7 @@ func getMountPoints(aciPath string) ([]types.MountPoint, error) {
 		return nil, fmt.Errorf("error reading manifest from converted image: %v", err)
 	}
 
-	if manifest.App != nil && manifest.App.MountPoints != nil {
-		return manifest.App.MountPoints, nil
-	}
-
-	return []types.MountPoint{}, nil
+	return manifest, nil
 }
 
 func usage() {
