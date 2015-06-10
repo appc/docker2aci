@@ -105,11 +105,11 @@ func GenerateManifest(layerData types.DockerImageData, dockerURL *types.ParsedDo
 		appURL = dockerURL.IndexURL + "/"
 	}
 	appURL += dockerURL.ImageName + "-" + layerData.ID
-	appURL, err := appctypes.SanitizeACName(appURL)
+	appURL, err := appctypes.SanitizeACIdentifier(appURL)
 	if err != nil {
 		return nil, err
 	}
-	name := appctypes.MustACName(appURL)
+	name := appctypes.MustACIdentifier(appURL)
 	genManifest.Name = *name
 
 	acVersion, err := appctypes.NewSemVer(schemaVersion)
@@ -126,20 +126,20 @@ func GenerateManifest(layerData types.DockerImageData, dockerURL *types.ParsedDo
 		annotations  appctypes.Annotations
 	)
 
-	layer := appctypes.MustACName("layer")
+	layer := appctypes.MustACIdentifier("layer")
 	labels = append(labels, appctypes.Label{Name: *layer, Value: layerData.ID})
 
 	tag := dockerURL.Tag
-	version := appctypes.MustACName("version")
+	version := appctypes.MustACIdentifier("version")
 	labels = append(labels, appctypes.Label{Name: *version, Value: tag})
 
 	if layerData.OS != "" {
-		os := appctypes.MustACName("os")
+		os := appctypes.MustACIdentifier("os")
 		labels = append(labels, appctypes.Label{Name: *os, Value: layerData.OS})
 		parentLabels = append(parentLabels, appctypes.Label{Name: *os, Value: layerData.OS})
 
 		if layerData.Architecture != "" {
-			arch := appctypes.MustACName("arch")
+			arch := appctypes.MustACIdentifier("arch")
 			parentLabels = append(parentLabels, appctypes.Label{Name: *arch, Value: layerData.Architecture})
 		}
 	}
@@ -194,11 +194,11 @@ func GenerateManifest(layerData types.DockerImageData, dockerURL *types.ParsedDo
 
 	if layerData.Parent != "" {
 		parentImageNameString := dockerURL.IndexURL + "/" + dockerURL.ImageName + "-" + layerData.Parent
-		parentImageNameString, err := appctypes.SanitizeACName(parentImageNameString)
+		parentImageNameString, err := appctypes.SanitizeACIdentifier(parentImageNameString)
 		if err != nil {
 			return nil, err
 		}
-		parentImageName := appctypes.MustACName(parentImageNameString)
+		parentImageName := appctypes.MustACIdentifier(parentImageNameString)
 
 		genManifest.Dependencies = append(genManifest.Dependencies, appctypes.Dependency{ImageName: *parentImageName, Labels: parentLabels})
 	}
@@ -262,7 +262,7 @@ func convertVolumesToMPs(dockerVolumes map[string]struct{}) ([]appctypes.MountPo
 
 	for p := range dockerVolumes {
 		n := filepath.Join("volume-", p)
-		sn, err := appctypes.SanitizeACName(n)
+		sn, err := appctypes.SanitizeACIdentifier(n)
 		if err != nil {
 			return nil, err
 		}

@@ -281,7 +281,7 @@ func mergeManifests(manifests []schema.ImageManifest) schema.ImageManifest {
 	}
 
 	// this can't fail because the old name is legal
-	nameWithoutLayerID, _ := appctypes.NewACName(stripLayerID(manifest.Name.String()))
+	nameWithoutLayerID, _ := appctypes.NewACIdentifier(stripLayerID(manifest.Name.String()))
 
 	manifest.Name = *nameWithoutLayerID
 
