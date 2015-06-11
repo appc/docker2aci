@@ -154,7 +154,7 @@ func GenerateManifest(layerData types.DockerImageData, dockerURL *types.ParsedDo
 		annotations = append(annotations, appctypes.Annotation{Name: *createdKey, Value: layerData.Created.Format(time.RFC3339)})
 	}
 	if layerData.Comment != "" {
-		commentKey := appctypes.MustACName("docker/comment")
+		commentKey := appctypes.MustACName("docker-comment")
 		annotations = append(annotations, appctypes.Annotation{Name: *commentKey, Value: layerData.Comment})
 	}
 
@@ -247,8 +247,13 @@ func parseDockerPort(dockerPort string) (*appctypes.Port, error) {
 		return nil, fmt.Errorf("error parsing port %q: %v", portString, err)
 	}
 
+	sn, err := appctypes.SanitizeACName(dockerPort)
+	if err != nil {
+		return nil, err
+	}
+
 	appcPort := &appctypes.Port{
-		Name:     *appctypes.MustACName(dockerPort),
+		Name:     *appctypes.MustACName(sn),
 		Protocol: proto,
 		Port:     uint(port),
 	}
@@ -261,7 +266,7 @@ func convertVolumesToMPs(dockerVolumes map[string]struct{}) ([]appctypes.MountPo
 	dup := make(map[string]int)
 
 	for p := range dockerVolumes {
-		n := filepath.Join("volume-", p)
+		n := filepath.Join("volume", p)
 		sn, err := appctypes.SanitizeACName(n)
 		if err != nil {
 			return nil, err
