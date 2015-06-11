@@ -262,7 +262,7 @@ func convertVolumesToMPs(dockerVolumes map[string]struct{}) ([]appctypes.MountPo
 
 	for p := range dockerVolumes {
 		n := filepath.Join("volume-", p)
-		sn, err := appctypes.SanitizeACIdentifier(n)
+		sn, err := appctypes.SanitizeACName(n)
 		if err != nil {
 			return nil, err
 		}
