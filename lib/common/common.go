@@ -145,16 +145,16 @@ func GenerateManifest(layerData types.DockerImageData, dockerURL *types.ParsedDo
 	}
 
 	if layerData.Author != "" {
-		authorsKey := appctypes.MustACName("authors")
+		authorsKey := appctypes.MustACIdentifier("authors")
 		annotations = append(annotations, appctypes.Annotation{Name: *authorsKey, Value: layerData.Author})
 	}
 	epoch := time.Unix(0, 0)
 	if !layerData.Created.Equal(epoch) {
-		createdKey := appctypes.MustACName("created")
+		createdKey := appctypes.MustACIdentifier("created")
 		annotations = append(annotations, appctypes.Annotation{Name: *createdKey, Value: layerData.Created.Format(time.RFC3339)})
 	}
 	if layerData.Comment != "" {
-		commentKey := appctypes.MustACName("docker-comment")
+		commentKey := appctypes.MustACIdentifier("docker-comment")
 		annotations = append(annotations, appctypes.Annotation{Name: *commentKey, Value: layerData.Comment})
 	}
 
