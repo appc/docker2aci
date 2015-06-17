@@ -28,7 +28,7 @@ Docker Volumes get converted to mountPoints in the
 [Image Manifest Schema][imageschema]. Since mountPoints need a name and Docker
 Volumes don't, docker2aci generates a name by appending the path to `volume-`.
 That is, if a Volume has `/var/tmp` as path, the resulting mountPoint name will
-be `volume-/var/tmp`.
+be `volume--var-tmp`.
 
 When the docker2aci CLI binary converts a Docker Volume to a mountPoint it will
 print its name, path and whether it is read-only or not.
@@ -94,7 +94,10 @@ Downloading 54ca92b7c8d7: [====================================] 32 B/32 B
 Downloading 06a1f75304ba: [====================================] 32 B/32 B
 
 Converted volumes:
-        name: "volume-/data", path: "/data", readOnly: false
+        name: "volume-data", path: "/data", readOnly: false
+
+Converted ports:
+	    name: "6379-tcp", protocol: "tcp", port: 6379, count: 1, socketActivated: false
 
 Generated ACI(s):
 redis-latest.aci
