@@ -24,14 +24,20 @@ or as involved as:
 
 ## Volumes
 
-Docker Volumes get converted to mountPoints in the
-[Image Manifest Schema][imageschema]. Since mountPoints need a name and Docker
-Volumes don't, docker2aci generates a name by appending the path to `volume-`.
-That is, if a Volume has `/var/tmp` as path, the resulting mountPoint name will
-be `volume--var-tmp`.
+Docker Volumes get converted to mountPoints in the [Image Manifest
+Schema][imageschema]. Since mountPoints need a name and Docker Volumes don't,
+docker2aci generates a name by appending the path to `volume-` replacing
+non-alphanumeric characters with dashes. That is, if a Volume has `/var/tmp`
+as path, the resulting mountPoint name will be `volume-var-tmp`.
 
 When the docker2aci CLI binary converts a Docker Volume to a mountPoint it will
 print its name, path and whether it is read-only or not.
+
+## Ports
+
+Docker Ports get converted to ports in the [Image Manifest
+Schema][imageschema]. The resulting port name will be the port number and the
+protocol separated by a dash. For example: `6379-tcp`.
 
 ## CLI examples
 
@@ -43,6 +49,8 @@ Downloading 8c2e06607696: [====================================] 32 B/32 B
 
 Generated ACI(s):
 busybox-latest.aci
+$ actool --debug validate busybox-latest.aci
+busybox-latest.aci: valid app container image
 ```
 
 ```
@@ -71,6 +79,8 @@ Extracting b7cf8f0d9e82
 
 Generated ACI(s):
 ubuntu-latest.aci
+$ actool --debug validate ubuntu-latest.aci 
+ubuntu-latest.aci: valid app container image
 ```
 
 ```
@@ -97,11 +107,13 @@ Converted volumes:
         name: "volume-data", path: "/data", readOnly: false
 
 Converted ports:
-	    name: "6379-tcp", protocol: "tcp", port: 6379, count: 1, socketActivated: false
+        name: "6379-tcp", protocol: "tcp", port: 6379, count: 1, socketActivated: false
 
 Generated ACI(s):
 redis-latest.aci
+$ actool --debug validate redis-latest.aci
+redis-latest.aci: valid app container image
 ```
 
 [aci]: https://github.com/appc/spec/blob/master/SPEC.md#app-container-image
-[imageschema]: https://github.com/appc/spec/blob/master/SPEC.md#image-manifest-schema
+[imageschema]: https://github.com/appc/spec/blob/master/spec/aci.md#image-manifest-schema
