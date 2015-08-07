@@ -22,8 +22,13 @@ import (
 )
 
 const (
-	defaultTag    = "latest"
-	schemaVersion = "0.5.1"
+	defaultTag                = "latest"
+	schemaVersion             = "0.6.1"
+	appcDockerV1RegistryURL   = "appc.io/docker/v1/registryurl"
+	appcDockerV1Repository    = "appc.io/docker/v1/repository"
+	appcDockerV1Tag           = "appc.io/docker/v1/tag"
+	appcDockerV1ImageID       = "appc.io/docker/v1/imageid"
+	appcDockerV1ParentImageID = "appc.io/docker/v1/parentimageid"
 )
 
 func ParseDockerURL(arg string) *types.ParsedDockerURL {
@@ -159,6 +164,11 @@ func GenerateManifest(layerData types.DockerImageData, dockerURL *types.ParsedDo
 		annotations = append(annotations, appctypes.Annotation{Name: *commentKey, Value: layerData.Comment})
 	}
 
+	annotations = append(annotations, appctypes.Annotation{Name: *appctypes.MustACIdentifier(appcDockerV1RegistryURL), Value: dockerURL.IndexURL})
+	annotations = append(annotations, appctypes.Annotation{Name: *appctypes.MustACIdentifier(appcDockerV1Repository), Value: dockerURL.ImageName})
+	annotations = append(annotations, appctypes.Annotation{Name: *appctypes.MustACIdentifier(appcDockerV1ImageID), Value: layerData.ID})
+	annotations = append(annotations, appctypes.Annotation{Name: *appctypes.MustACIdentifier(appcDockerV1ParentImageID), Value: layerData.Parent})
+
 	genManifest.Labels = labels
 	genManifest.Annotations = annotations
 
@@ -202,6 +212,8 @@ func GenerateManifest(layerData types.DockerImageData, dockerURL *types.ParsedDo
 		parentImageName := appctypes.MustACIdentifier(parentImageNameString)
 
 		genManifest.Dependencies = append(genManifest.Dependencies, appctypes.Dependency{ImageName: *parentImageName, Labels: parentLabels})
+
+		annotations = append(annotations, appctypes.Annotation{Name: *appctypes.MustACIdentifier(appcDockerV1Tag), Value: dockerURL.Tag})
 	}
 
 	return genManifest, nil
