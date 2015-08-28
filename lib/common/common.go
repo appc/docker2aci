@@ -205,7 +205,12 @@ func GenerateManifest(layerData types.DockerImageData, dockerURL *types.ParsedDo
 	}
 
 	if layerData.Parent != "" {
-		parentImageNameString := dockerURL.IndexURL + "/" + dockerURL.ImageName + "-" + layerData.Parent
+		indexPrefix := ""
+		// omit docker hub index URL in app name
+		if dockerURL.IndexURL != defaultIndex {
+			indexPrefix = dockerURL.IndexURL + "/"
+		}
+		parentImageNameString := indexPrefix + dockerURL.ImageName + "-" + layerData.Parent
 		parentImageNameString, err := appctypes.SanitizeACIdentifier(parentImageNameString)
 		if err != nil {
 			return nil, err
