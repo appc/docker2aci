@@ -92,9 +92,8 @@ func ValidateACI(aciPath string) error {
 	if err != nil {
 		return err
 	}
-	defer tr.Close()
 
-	if err := aci.ValidateArchive(tr.Reader); err != nil {
+	if err := aci.ValidateArchive(tr); err != nil {
 		return err
 	}
 
@@ -360,9 +359,8 @@ func writeACI(layer io.ReadSeeker, manifest schema.ImageManifest, curPwl []strin
 	}
 	tr, err := aci.NewCompressedTarReader(layer)
 	if err == nil {
-		defer tr.Close()
 		// write files in rootfs/
-		if err := tarball.Walk(*tr.Reader, convWalker); err != nil {
+		if err := tarball.Walk(*tr, convWalker); err != nil {
 			return nil, err
 		}
 	} else {
