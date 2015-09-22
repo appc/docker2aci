@@ -23,7 +23,7 @@ import (
 
 const (
 	defaultTag                = "latest"
-	schemaVersion             = "0.6.1"
+	schemaVersion             = "0.7.0"
 	appcDockerV1RegistryURL   = "appc.io/docker/v1/registryurl"
 	appcDockerV1Repository    = "appc.io/docker/v1/repository"
 	appcDockerV1Tag           = "appc.io/docker/v1/tag"
