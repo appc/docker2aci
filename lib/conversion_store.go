@@ -45,6 +45,7 @@ func (ms *ConversionStore) WriteACI(path string) (string, error) {
 	if err != nil {
 		return "", err
 	}
+	defer cr.Close()
 
 	h := sha512.New()
 	r := io.TeeReader(cr, h)
@@ -97,6 +98,7 @@ func (ms *ConversionStore) ReadStream(key string) (io.ReadCloser, error) {
 	if err != nil {
 		return nil, err
 	}
+	defer tr.Close()
 
 	return ioutil.NopCloser(tr), nil
 }
