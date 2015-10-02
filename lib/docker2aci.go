@@ -241,8 +241,8 @@ func writeSquashedImage(outputFile *os.File, renderedACI acirenderer.RenderedACI
 			cleanName := filepath.Clean(t.Name())
 
 			if _, ok := aciFile.FileMap[cleanName]; ok {
-				// we generate and add the squashed manifest later
-				if cleanName == "manifest" {
+				// we generate and add rootfs and the squashed manifest later
+				if cleanName == "manifest" || cleanName == "rootfs" {
 					return nil
 				}
 				if err := outputWriter.WriteHeader(t.Header); err != nil {
