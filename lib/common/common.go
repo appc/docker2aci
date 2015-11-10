@@ -3,6 +3,7 @@ package common
 import (
 	"archive/tar"
 	"compress/gzip"
+	"crypto/sha512"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -310,6 +311,16 @@ func convertVolumesToMPs(dockerVolumes map[string]struct{}) ([]appctypes.MountPo
 	return mps, nil
 }
 
+func getIdFromName(layer, target string) string {
+	h := sha512.New()
+	h.Write([]byte(layer))
+	h.Write([]byte{0})
+	h.Write([]byte(target))
+	h.Write([]byte{0})
+
+	return fmt.Sprintf(".hidden.docker2aci.sha512-%x", h.Sum(nil))
+}
+
 func writeACI(layer io.ReadSeeker, manifest schema.ImageManifest, curPwl []string, output string, compress bool) (*schema.ImageManifest, error) {
 	aciFile, err := os.Create(output)
 	if err != nil {
@@ -348,8 +359,23 @@ func writeACI(layer io.ReadSeeker, manifest schema.ImageManifest, curPwl []strin
 			whiteouts = append(whiteouts, strings.Replace(absolutePath, ".wh.", "", 1))
 			return nil
 		}
+
 		if t.Header.Typeflag == tar.TypeLink {
-			t.Header.Linkname = path.Join("rootfs", t.Linkname())
+			hash := getIdFromName(manifest.Name.String(), t.Linkname())
+			t.Header.Linkname = path.Join("rootfs", hash)
+		} else if t.Header.Typeflag == tar.TypeReg {
+			var newHeader tar.Header = *t.Header
+			linkname := path.Join("rootfs", getIdFromName(manifest.Name.String(), name))
+			newHeader.Name = linkname
+			if err := trw.WriteHeader(&newHeader); err != nil {
+				return err
+			}
+			if _, err := io.Copy(trw, t.TarStream); err != nil {
+				return err
+			}
+			t.Header.Typeflag = tar.TypeLink
+			t.Header.Linkname = linkname
+			t.Header.Size = 0
 		}
 
 		if err := trw.WriteHeader(t.Header); err != nil {
