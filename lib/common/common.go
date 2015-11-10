@@ -23,13 +23,14 @@ import (
 )
 
 const (
-	defaultTag                = "latest"
-	schemaVersion             = "0.7.0"
-	appcDockerV1RegistryURL   = "appc.io/docker/v1/registryurl"
-	appcDockerV1Repository    = "appc.io/docker/v1/repository"
-	appcDockerV1Tag           = "appc.io/docker/v1/tag"
-	appcDockerV1ImageID       = "appc.io/docker/v1/imageid"
-	appcDockerV1ParentImageID = "appc.io/docker/v1/parentimageid"
+	defaultTag              = "latest"
+	defaultIndexURL         = "registry-1.docker.io"
+	schemaVersion           = "0.7.0"
+	appcDockerRegistryURL   = "appc.io/docker/registryurl"
+	appcDockerRepository    = "appc.io/docker/repository"
+	appcDockerTag           = "appc.io/docker/tag"
+	appcDockerImageID       = "appc.io/docker/imageid"
+	appcDockerParentImageID = "appc.io/docker/parentimageid"
 )
 
 func ParseDockerURL(arg string) *types.ParsedDockerURL {
@@ -43,6 +44,14 @@ func ParseDockerURL(arg string) *types.ParsedDockerURL {
 	}
 	indexURL, imageName := SplitReposName(taglessRemote)
 
+	if indexURL == "" && !strings.Contains(imageName, "/") {
+		imageName = "library/" + imageName
+	}
+
+	if indexURL == "" {
+		indexURL = defaultIndexURL
+	}
+
 	return &types.ParsedDockerURL{
 		IndexURL:  indexURL,
 		ImageName: imageName,
@@ -50,7 +59,7 @@ func ParseDockerURL(arg string) *types.ParsedDockerURL {
 	}
 }
 
-func GenerateACI(layerData types.DockerImageData, dockerURL *types.ParsedDockerURL, outputDir string, layerFile *os.File, curPwl []string, compress bool) (string, *schema.ImageManifest, error) {
+func GenerateACI(layerNumber int, layerData types.DockerImageData, dockerURL *types.ParsedDockerURL, outputDir string, layerFile *os.File, curPwl []string, compress bool) (string, *schema.ImageManifest, error) {
 	manifest, err := GenerateManifest(layerData, dockerURL)
 	if err != nil {
 		return "", nil, fmt.Errorf("error generating the manifest: %v", err)
@@ -67,6 +76,7 @@ func GenerateACI(layerData types.DockerImageData, dockerURL *types.ParsedDockerU
 			aciPath += "-" + layerData.Architecture
 		}
 	}
+	aciPath += "-" + strconv.Itoa(layerNumber)
 	aciPath += ".aci"
 
 	aciPath = path.Join(outputDir, aciPath)
@@ -107,10 +117,7 @@ func GenerateManifest(layerData types.DockerImageData, dockerURL *types.ParsedDo
 	genManifest := &schema.ImageManifest{}
 
 	appURL := ""
-	// omit docker hub index URL in app name
-	if dockerURL.IndexURL != defaultIndex {
-		appURL = dockerURL.IndexURL + "/"
-	}
+	appURL = dockerURL.IndexURL + "/"
 	appURL += dockerURL.ImageName + "-" + layerData.ID
 	appURL, err := appctypes.SanitizeACIdentifier(appURL)
 	if err != nil {
@@ -166,10 +173,12 @@ func GenerateManifest(layerData types.DockerImageData, dockerURL *types.ParsedDo
 		annotations = append(annotations, appctypes.Annotation{Name: *commentKey, Value: layerData.Comment})
 	}
 
-	annotations = append(annotations, appctypes.Annotation{Name: *appctypes.MustACIdentifier(appcDockerV1RegistryURL), Value: dockerURL.IndexURL})
-	annotations = append(annotations, appctypes.Annotation{Name: *appctypes.MustACIdentifier(appcDockerV1Repository), Value: dockerURL.ImageName})
-	annotations = append(annotations, appctypes.Annotation{Name: *appctypes.MustACIdentifier(appcDockerV1ImageID), Value: layerData.ID})
-	annotations = append(annotations, appctypes.Annotation{Name: *appctypes.MustACIdentifier(appcDockerV1ParentImageID), Value: layerData.Parent})
+	if dockerURL.IndexURL != "" {
+		annotations = append(annotations, appctypes.Annotation{Name: *appctypes.MustACIdentifier(appcDockerRegistryURL), Value: dockerURL.IndexURL})
+	}
+	annotations = append(annotations, appctypes.Annotation{Name: *appctypes.MustACIdentifier(appcDockerRepository), Value: dockerURL.ImageName})
+	annotations = append(annotations, appctypes.Annotation{Name: *appctypes.MustACIdentifier(appcDockerImageID), Value: layerData.ID})
+	annotations = append(annotations, appctypes.Annotation{Name: *appctypes.MustACIdentifier(appcDockerParentImageID), Value: layerData.Parent})
 
 	genManifest.Labels = labels
 	genManifest.Annotations = annotations
@@ -208,9 +217,7 @@ func GenerateManifest(layerData types.DockerImageData, dockerURL *types.ParsedDo
 	if layerData.Parent != "" {
 		indexPrefix := ""
 		// omit docker hub index URL in app name
-		if dockerURL.IndexURL != defaultIndex {
-			indexPrefix = dockerURL.IndexURL + "/"
-		}
+		indexPrefix = dockerURL.IndexURL + "/"
 		parentImageNameString := indexPrefix + dockerURL.ImageName + "-" + layerData.Parent
 		parentImageNameString, err := appctypes.SanitizeACIdentifier(parentImageNameString)
 		if err != nil {
@@ -220,7 +227,7 @@ func GenerateManifest(layerData types.DockerImageData, dockerURL *types.ParsedDo
 
 		genManifest.Dependencies = append(genManifest.Dependencies, appctypes.Dependency{ImageName: *parentImageName, Labels: parentLabels})
 
-		annotations = append(annotations, appctypes.Annotation{Name: *appctypes.MustACIdentifier(appcDockerV1Tag), Value: dockerURL.Tag})
+		annotations = append(annotations, appctypes.Annotation{Name: *appctypes.MustACIdentifier(appcDockerTag), Value: dockerURL.Tag})
 	}
 
 	return genManifest, nil

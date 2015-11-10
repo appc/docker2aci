@@ -32,9 +32,10 @@ var (
 	flagNoSquash = flag.Bool("nosquash", false, "Don't squash layers and output every layer as ACI")
 	flagImage    = flag.String("image", "", "When converting a local file, it selects a particular image to convert. Format: IMAGE_NAME[:TAG]")
 	flagDebug    = flag.Bool("debug", false, "Enables debug messages")
+	flagInsecure = flag.Bool("insecure", false, "Uses unencrypted connections when fetching images")
 )
 
-func runDocker2ACI(arg string, flagNoSquash bool, flagImage string, flagDebug bool) error {
+func runDocker2ACI(arg string, flagNoSquash bool, flagImage string, flagDebug bool, flagInsecure bool) error {
 	if flagDebug {
 		util.InitDebug()
 	}
@@ -60,7 +61,7 @@ func runDocker2ACI(arg string, flagNoSquash bool, flagImage string, flagDebug bo
 			return fmt.Errorf("error reading .dockercfg file: %v", err)
 		}
 
-		aciLayerPaths, err = docker2aci.Convert(dockerURL, squash, ".", os.TempDir(), username, password)
+		aciLayerPaths, err = docker2aci.Convert(dockerURL, squash, ".", os.TempDir(), username, password, flagInsecure)
 	} else {
 		aciLayerPaths, err = docker2aci.ConvertFile(flagImage, arg, squash, ".", os.TempDir())
 	}
@@ -156,7 +157,7 @@ func main() {
 		return
 	}
 
-	if err := runDocker2ACI(args[0], *flagNoSquash, *flagImage, *flagDebug); err != nil {
+	if err := runDocker2ACI(args[0], *flagNoSquash, *flagImage, *flagDebug, *flagInsecure); err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		os.Exit(1)
 	}
