@@ -98,9 +98,8 @@ func (ms *ConversionStore) ReadStream(key string) (io.ReadCloser, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer tr.Close()
 
-	return ioutil.NopCloser(tr), nil
+	return tr, nil
 }
 
 func (ms *ConversionStore) ResolveKey(key string) (string, error) {
