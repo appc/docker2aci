@@ -338,6 +338,11 @@ func writeACI(layer io.ReadSeeker, manifest schema.ImageManifest, curPwl []strin
 		}
 		t.Header.Name = path.Join("rootfs", name)
 		absolutePath := strings.TrimPrefix(t.Header.Name, "rootfs")
+
+		if filepath.Clean(absolutePath) == "/dev" && t.Header.Typeflag != tar.TypeDir {
+			return fmt.Errorf(`invalid layer: "/dev" is not a directory`)
+		}
+
 		fileMap[absolutePath] = struct{}{}
 		if strings.Contains(t.Header.Name, "/.wh.") {
 			whiteouts = append(whiteouts, strings.Replace(absolutePath, ".wh.", "", 1))
