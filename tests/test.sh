@@ -25,19 +25,30 @@ if ! which rkt > /dev/null ; then
 fi
 RKT=$(which rkt)
 
+DOCKER_STORAGE_BACKEND=$(sudo docker info|grep '^Storage Driver:'|sed 's/Storage Driver: //')
+
 for i in $(find . -maxdepth 1 -type d -name 'test-*') ; do
 	TESTNAME=$(basename $i)
-	echo "### Test case: ${TESTNAME}"
-	sudo docker build --tag=$PREFIX/${TESTNAME} --quiet ${TESTNAME}
-	sudo docker run $PREFIX/${TESTNAME}
+	echo "### Test case ${TESTNAME}: build..."
+	sudo docker build --tag=$PREFIX/${TESTNAME} --no-cache=true ${TESTNAME}
+
+	echo "### Test case ${TESTNAME}: test in Docker..."
+	sudo docker run --rm --env=CHECK=docker-run --env=DOCKER_STORAGE_BACKEND=$DOCKER_STORAGE_BACKEND $PREFIX/${TESTNAME}
+
+	echo "### Test case ${TESTNAME}: converting to ACI..."
 	sudo docker save -o ${TESTNAME}.docker $PREFIX/${TESTNAME}
 	$DOCKER2ACI ${TESTNAME}.docker
-	sudo $RKT run --insecure-skip-verify ./${PREFIX}-${TESTNAME}-latest.aci
+
+	echo "### Test case ${TESTNAME}: test in rkt..."
+	sudo $RKT run --insecure-skip-verify --set-env=CHECK=rkt-run --set-env=DOCKER_STORAGE_BACKEND=$DOCKER_STORAGE_BACKEND ./${PREFIX}-${TESTNAME}-latest.aci
+
+	echo "### Test case ${TESTNAME}: test with 'rkt image render'..."
 	sudo $RKT image render --overwrite ${PREFIX}/${TESTNAME} ./rendered-${TESTNAME}
-	if [ -x $TESTDIR/${TESTNAME}/check.sh ] ; then
-		pushd rendered-${TESTNAME}/rootfs
-		rendered=true $TESTDIR/${TESTNAME}/check.sh
-		popd
-	fi
+	pushd rendered-${TESTNAME}/rootfs
+	CHECK=rkt-rendered DOCKER_STORAGE_BACKEND=$DOCKER_STORAGE_BACKEND $TESTDIR/${TESTNAME}/check.sh
+	popd
+	echo "### Test case ${TESTNAME}: SUCCESS"
+
+	sudo docker rmi $PREFIX/${TESTNAME}
 done
 

@@ -230,6 +230,32 @@ func writeSquashedImage(outputFile *os.File, renderedACI acirenderer.RenderedACI
 	outputWriter := tar.NewWriter(gw)
 	defer outputWriter.Close()
 
+	finalManifest := mergeManifests(manifests)
+
+	if err := common.WriteManifest(outputWriter, finalManifest); err != nil {
+		return err
+	}
+
+	if err := common.WriteRootfsDir(outputWriter); err != nil {
+		return err
+	}
+
+	type hardLinkEntry struct {
+		firstLinkCleanName string
+		firstLinkHeader    tar.Header
+		walked             bool
+	}
+	hardLinks := make(map[string]hardLinkEntry)
+
+	type tempEntry struct {
+		cleanName string
+		keep      bool
+		firstLink bool
+	}
+	var entries []tempEntry
+
+	// first pass: read all the entries and build tempEntry, hardLinks in memory
+	// but don't write on disk
 	for _, aciFile := range renderedACI {
 		rs, err := aciProvider.ReadStream(aciFile.Key)
 		if err != nil {
@@ -239,19 +265,18 @@ func writeSquashedImage(outputFile *os.File, renderedACI acirenderer.RenderedACI
 
 		squashWalker := func(t *tarball.TarFile) error {
 			cleanName := filepath.Clean(t.Name())
-
-			if _, ok := aciFile.FileMap[cleanName]; ok {
-				// we generate and add rootfs and the squashed manifest later
-				if cleanName == "manifest" || cleanName == "rootfs" {
-					return nil
-				}
-				if err := outputWriter.WriteHeader(t.Header); err != nil {
-					return fmt.Errorf("error writing header: %v", err)
-				}
-				if _, err := io.Copy(outputWriter, t.TarStream); err != nil {
-					return fmt.Errorf("error copying file into the tar out: %v", err)
+			// the rootfs and the squashed manifest are added separately
+			if cleanName == "manifest" || cleanName == "rootfs" {
+				return nil
+			}
+			_, keep := aciFile.FileMap[cleanName]
+			if keep && t.Header.Typeflag == tar.TypeLink {
+				cleanTarget := filepath.Clean(t.Linkname())
+				if _, ok := hardLinks[cleanTarget]; !ok {
+					hardLinks[cleanTarget] = hardLinkEntry{cleanName, *t.Header, false}
 				}
 			}
+			entries = append(entries, tempEntry{cleanName, keep, false})
 			return nil
 		}
 
@@ -261,14 +286,68 @@ func writeSquashedImage(outputFile *os.File, renderedACI acirenderer.RenderedACI
 		}
 	}
 
-	if err := common.WriteRootfsDir(outputWriter); err != nil {
-		return err
+	// second pass: write on disk
+	currentEntry := 0
+	for _, aciFile := range renderedACI {
+		rs, err := aciProvider.ReadStream(aciFile.Key)
+		if err != nil {
+			return err
+		}
+		defer rs.Close()
+
+		squashWalker := func(t *tarball.TarFile) error {
+			cleanName := filepath.Clean(t.Name())
+			// the rootfs and the squashed manifest are added separately
+			if cleanName == "manifest" || cleanName == "rootfs" {
+				return nil
+			}
+
+			if link, ok := hardLinks[cleanName]; ok {
+				link.firstLinkHeader.Size = t.Header.Size
+				link.firstLinkHeader.Typeflag = t.Header.Typeflag
+				link.firstLinkHeader.Linkname = ""
+
+				if err := outputWriter.WriteHeader(&link.firstLinkHeader); err != nil {
+					return fmt.Errorf("error writing header: %v", err)
+				}
+				if _, err := io.Copy(outputWriter, t.TarStream); err != nil {
+					return fmt.Errorf("error copying file into the tar out: %v", err)
+				}
+			} else if entries[currentEntry].keep {
+				if t.Header.Typeflag == tar.TypeLink {
+					cleanTarget := filepath.Clean(t.Linkname())
+					if link, ok := hardLinks[cleanTarget]; ok {
+						if !link.walked {
+							entries[currentEntry].firstLink = true
+						} else {
+							t.Header.Linkname = link.firstLinkCleanName
+						}
+						link.walked = true
+						hardLinks[cleanTarget] = link
+					}
+				}
+
+				if !entries[currentEntry].firstLink {
+					if err := outputWriter.WriteHeader(t.Header); err != nil {
+						return fmt.Errorf("error writing header: %v", err)
+					}
+					if _, err := io.Copy(outputWriter, t.TarStream); err != nil {
+						return fmt.Errorf("error copying file into the tar out: %v", err)
+					}
+				}
+			}
+			currentEntry++
+			return nil
+		}
+
+		tr := tar.NewReader(rs)
+		if err := tarball.Walk(*tr, squashWalker); err != nil {
+			return err
+		}
 	}
 
-	finalManifest := mergeManifests(manifests)
-
-	if err := common.WriteManifest(outputWriter, finalManifest); err != nil {
-		return err
+	if len(entries) != currentEntry {
+		panic(fmt.Sprintf("found %d tarball entries in the first iteration and %d in the second", len(entries), currentEntry))
 	}
 
 	return nil
