@@ -9,6 +9,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -225,6 +226,20 @@ func GenerateManifest(layerData types.DockerImageData, dockerURL *types.ParsedDo
 	return genManifest, nil
 }
 
+type appcPortSorter []appctypes.Port
+
+func (s appcPortSorter) Len() int {
+	return len(s)
+}
+
+func (s appcPortSorter) Swap(i, j int) {
+	s[i], s[j] = s[j], s[i]
+}
+
+func (s appcPortSorter) Less(i, j int) bool {
+	return s[i].Name.String() < s[j].Name.String()
+}
+
 func convertPorts(dockerExposedPorts map[string]struct{}, dockerPortSpecs []string) ([]appctypes.Port, error) {
 	ports := []appctypes.Port{}
 
@@ -246,6 +261,8 @@ func convertPorts(dockerExposedPorts map[string]struct{}, dockerPortSpecs []stri
 			ports = append(ports, *appcPort)
 		}
 	}
+
+	sort.Sort(appcPortSorter(ports))
 
 	return ports, nil
 }
@@ -280,6 +297,20 @@ func parseDockerPort(dockerPort string) (*appctypes.Port, error) {
 	return appcPort, nil
 }
 
+type appcVolSorter []appctypes.MountPoint
+
+func (s appcVolSorter) Len() int {
+	return len(s)
+}
+
+func (s appcVolSorter) Swap(i, j int) {
+	s[i], s[j] = s[j], s[i]
+}
+
+func (s appcVolSorter) Less(i, j int) bool {
+	return s[i].Name.String() < s[j].Name.String()
+}
+
 func convertVolumesToMPs(dockerVolumes map[string]struct{}) ([]appctypes.MountPoint, error) {
 	mps := []appctypes.MountPoint{}
 	dup := make(map[string]int)
@@ -306,6 +337,8 @@ func convertVolumesToMPs(dockerVolumes map[string]struct{}) ([]appctypes.MountPo
 
 		mps = append(mps, mp)
 	}
+
+	sort.Sort(appcVolSorter(mps))
 
 	return mps, nil
 }
@@ -447,6 +480,8 @@ func subtractWhiteouts(pathWhitelist []string, whiteouts []string) []string {
 		}
 	}
 
+	sort.Sort(sort.StringSlice(pathWhitelist))
+
 	return pathWhitelist
 }
 
@@ -482,21 +517,28 @@ func WriteRootfsDir(tarWriter *tar.Writer) error {
 	return tarWriter.WriteHeader(hdr)
 }
 
+type symlink struct {
+	linkname string
+	target   string
+}
+
 // writeStdioSymlinks adds the /dev/stdin, /dev/stdout, /dev/stderr, and
 // /dev/fd symlinks expected by Docker to the converted ACIs so apps can find
 // them as expected
 func writeStdioSymlinks(tarWriter *tar.Writer, fileMap map[string]struct{}, pwl []string) ([]string, error) {
-	stdioSymlinks := map[string]string{
-		"/dev/stdin": "/proc/self/fd/0",
+	stdioSymlinks := []symlink{
+		{"/dev/stdin", "/proc/self/fd/0"},
 		// Docker makes /dev/{stdout,stderr} point to /proc/self/fd/{1,2} but
 		// we point to /dev/console instead in order to support the case when
 		// stdout/stderr is a Unix socket (e.g. for the journal).
-		"/dev/stdout": "/dev/console",
-		"/dev/stderr": "/dev/console",
-		"/dev/fd":     "/proc/self/fd",
+		{"/dev/stdout", "/dev/console"},
+		{"/dev/stderr", "/dev/console"},
+		{"/dev/fd", "/proc/self/fd"},
 	}
 
-	for name, target := range stdioSymlinks {
+	for _, s := range stdioSymlinks {
+		name := s.linkname
+		target := s.target
 		if _, exists := fileMap[name]; exists {
 			continue
 		}
