@@ -45,30 +45,33 @@ protocol separated by a dash. For example: `6379-tcp`.
 
 ```
 $ docker2aci docker://busybox
-Downloading cf2616975b4a: [====================================] 32 B/32 B
-Downloading 6ce2e90b0bc7: [====================================] 1.15 MB/1.15 MB
-Downloading 8c2e06607696: [====================================] 32 B/32 B
+Downloading sha256:55dc925c23d: [==============================] 674 KB/674 KB
+Downloading sha256:a3ed95caeb0: [==============================] 32 B/32 B
 
 Generated ACI(s):
-busybox-latest.aci
-$ actool --debug validate busybox-latest.aci
-busybox-latest.aci: valid app container image
+library-busybox-latest.aci
+$ actool --debug validate library-busybox-latest.aci
+library-busybox-latest.aci: valid app container image
 ```
 
 ```
 $ /docker2aci --nosquash docker://quay.io/coreos/etcd:latest
-Downloading 3c79dd31bf84: [====================================] 85 B/85 B
-Downloading 8423185475fe: [====================================] 4 MB/4 MB
-Downloading 185eec9979eb: [====================================] 2.02 MB/2.02 MB
-Downloading 78d63abf03b9: [====================================] 23 B/23 B
-Downloading c5f34efc4446: [====================================] 23 B/23 B
+Downloading sha256:f05e5379dcb: [==============================] 3.98 MB/3.98 MB
+Downloading sha256:af1897d2d32: [==============================] 3.5 MB/3.5 MB
+Downloading sha256:a3ed95caeb0: [==============================] 32 B/32 B
+Downloading sha256:a3ed95caeb0: [==============================] 32 B/32 B
+
+Converted ports:
+        name: "2379-tcp", protocol: "tcp", port: 2379, count: 1, socketActivated: false
+        name: "2380-tcp", protocol: "tcp", port: 2380, count: 1, socketActivated: false
+        name: "4001-tcp", protocol: "tcp", port: 4001, count: 1, socketActivated: false
+        name: "7001-tcp", protocol: "tcp", port: 7001, count: 1, socketActivated: false
 
 Generated ACI(s):
-coreos-etcd-3c79dd31bf84b2fb7c55354f5069964a72bb6ae0c1263331c0f83ce4c32a4b6a-latest-linux-amd64.aci
-coreos-etcd-8423185475fe5bb0c86dc98ba2816ca9cc29cbf3ec5f3ec091963854746ee131-latest-linux-amd64.aci
-coreos-etcd-185eec9979eb1288f1412ec997860d3c865ac6a9e5c71487d9876bc0ec7bbdfe-latest-linux-amd64.aci
-coreos-etcd-78d63abf03b980919deaac3454a80496559da893948f427868492fa8a0d717ab-latest-linux-amd64.aci
-coreos-etcd-c5f34efc44466ec7abb9a68af20d2f876ea691095747e7e5a62e890cdedadcdc-latest-linux-amd64.aci
+coreos-etcd-d21dd9a5886270b7c2c379c02fc548e0696b139c43bb12fdb2d9b63409717485-latest-linux-amd64-3.aci
+coreos-etcd-620329641f386e62c7b0e0fa60a9acef100e71058124ddc7f1969557c72b2458-latest-linux-amd64-2.aci
+coreos-etcd-9cd3f08f7ccfaad24c73757a5b4f79601f2790726d6ccdd556a82e5c9c5ddbfa-latest-linux-amd64-1.aci
+coreos-etcd-9cd3f08f7ccfaad24c73757a5b4f79601f2790726d6ccdd556a82e5c9c5ddbfa-latest-linux-amd64-0.aci
 ```
 
 ```
@@ -81,29 +84,29 @@ Extracting b7cf8f0d9e82
 
 Generated ACI(s):
 ubuntu-latest.aci
-$ actool --debug validate ubuntu-latest.aci 
+$ actool --debug validate ubuntu-latest.aci
 ubuntu-latest.aci: valid app container image
 ```
 
 ```
 $ docker2aci docker://redis
-Downloading 21e4345e9035: [====================================] 37.2 MB/37.2 MB
-Downloading b3d362b23ec1: [====================================] 32 B/32 B
-Downloading 29809ed33dfd: [====================================] 1.7 KB/1.7 KB
-Downloading b720af9a6508: [====================================] 7.56 MB/7.56 MB
-Downloading c215cb712b89: [====================================] 89.3 KB/89.3 KB
-Downloading 8d9a45a71a91: [====================================] 611 KB/611 KB 
-Downloading 130c4eb9410a: [====================================] 32 B/32 B
-Downloading 1c255a1b1254: [====================================] 32 B/32 B
-Downloading 7ebc2ece510e: [====================================] 32 B/32 B
-Downloading 4454da7c7dbc: [====================================] 3.03 MB/3.03 MB
-Downloading 3a8cd27bb3d5: [====================================] 95 B/95 B
-Downloading d315f0a01142: [====================================] 32 B/32 B
-Downloading e501d0146d1d: [====================================] 32 B/32 B
-Downloading 40980abbab9f: [====================================] 196 B/196 B
-Downloading 6755f61be70b: [====================================] 32 B/32 B
-Downloading 54ca92b7c8d7: [====================================] 32 B/32 B
-Downloading 06a1f75304ba: [====================================] 32 B/32 B
+Downloading sha256:c666c10c893: [==============================] 37.2 MB/37.2 MB
+Downloading sha256:a3ed95caeb0: [==============================] 32 B/32 B
+Downloading sha256:d6f52360d0a: [==============================] 1.69 KB/1.69 KB
+Downloading sha256:8c3a687fd4c: [==============================] 5.93 MB/5.93 MB
+Downloading sha256:15554e0e598: [==============================] 109 KB/109 KB 
+Downloading sha256:3286d490a29: [==============================] 611 KB/611 KB 
+Downloading sha256:a3ed95caeb0: [==============================] 32 B/32 B
+Downloading sha256:a3ed95caeb0: [==============================] 32 B/32 B
+Downloading sha256:a3ed95caeb0: [==============================] 32 B/32 B
+Downloading sha256:a3d89b95a63: [==============================] 3.04 MB/3.04 MB
+Downloading sha256:1c4db557158: [==============================] 98 B/98 B
+Downloading sha256:a3ed95caeb0: [==============================] 32 B/32 B
+Downloading sha256:a3ed95caeb0: [==============================] 32 B/32 B
+Downloading sha256:a1a961e320b: [==============================] 196 B/196 B
+Downloading sha256:a3ed95caeb0: [==============================] 32 B/32 B
+Downloading sha256:a3ed95caeb0: [==============================] 32 B/32 B
+Downloading sha256:a3ed95caeb0: [==============================] 32 B/32 B
 
 Converted volumes:
         name: "volume-data", path: "/data", readOnly: false
@@ -112,9 +115,9 @@ Converted ports:
         name: "6379-tcp", protocol: "tcp", port: 6379, count: 1, socketActivated: false
 
 Generated ACI(s):
-redis-latest.aci
-$ actool --debug validate redis-latest.aci
-redis-latest.aci: valid app container image
+library-redis-latest.aci
+$ actool --debug validate library-redis-latest.aci
+library-redis-latest.aci: valid app container image
 ```
 
 [aci]: https://github.com/appc/spec/blob/master/SPEC.md#app-container-image
