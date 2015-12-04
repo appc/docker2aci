@@ -14,6 +14,7 @@
 package repository
 
 import (
+	"crypto/tls"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -60,7 +61,13 @@ func (rb *RepositoryBackend) supportsV2(indexURL string) (bool, error) {
 		req.SetBasicAuth(rb.username, rb.password)
 	}
 
-	client := &http.Client{}
+	tr := &http.Transport{
+		TLSClientConfig: &tls.Config{
+			InsecureSkipVerify: rb.insecureSkipVerify,
+		},
+	}
+
+	client := &http.Client{Transport: tr}
 	res, err := client.Do(req)
 	if err != nil {
 		return false, err
@@ -141,7 +148,7 @@ func (rb *RepositoryBackend) getManifestV2(dockerURL *types.ParsedDockerURL) (*v
 		req.SetBasicAuth(rb.username, rb.password)
 	}
 
-	res, err := rb.makeRequest(req, dockerURL.ImageName)
+	res, err := rb.makeRequestV2(req, dockerURL.ImageName)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -198,7 +205,7 @@ func (rb *RepositoryBackend) getLayerV2(layerID string, dockerURL *types.ParsedD
 		return nil, err
 	}
 
-	res, err := rb.makeRequest(req, dockerURL.ImageName)
+	res, err := rb.makeRequestV2(req, dockerURL.ImageName)
 	if err != nil {
 		return nil, err
 	}
@@ -254,7 +261,7 @@ func (rb *RepositoryBackend) getLayerV2(layerID string, dockerURL *types.ParsedD
 	return layerFile, nil
 }
 
-func (rb *RepositoryBackend) makeRequest(req *http.Request, repo string) (*http.Response, error) {
+func (rb *RepositoryBackend) makeRequestV2(req *http.Request, repo string) (*http.Response, error) {
 	setBearerHeader := false
 	hostAuthTokens, ok := rb.hostsV2AuthTokens[req.URL.Host]
 	if ok {
@@ -265,7 +272,13 @@ func (rb *RepositoryBackend) makeRequest(req *http.Request, repo string) (*http.
 		}
 	}
 
-	client := &http.Client{}
+	tr := &http.Transport{
+		TLSClientConfig: &tls.Config{
+			InsecureSkipVerify: rb.insecureSkipVerify,
+		},
+	}
+
+	client := &http.Client{Transport: tr}
 	res, err := client.Do(req)
 	if err != nil {
 		return nil, err
@@ -366,5 +379,5 @@ func (rb *RepositoryBackend) makeRequest(req *http.Request, repo string) (*http.
 
 	hostAuthTokens[repo] = tokenStruct.Token
 
-	return rb.makeRequest(req, repo)
+	return rb.makeRequestV2(req, repo)
 }
