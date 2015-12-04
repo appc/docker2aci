@@ -20,23 +20,25 @@ import (
 )
 
 type RepositoryBackend struct {
-	repoData          *RepoData
-	username          string
-	password          string
-	insecure          bool
-	hostsV2Support    map[string]bool
-	hostsV2AuthTokens map[string]map[string]string
-	imageManifests    map[types.ParsedDockerURL]v2Manifest
+	repoData           *RepoData
+	username           string
+	password           string
+	insecureSkipVerify bool
+	insecureRegistry   bool
+	hostsV2Support     map[string]bool
+	hostsV2AuthTokens  map[string]map[string]string
+	imageManifests     map[types.ParsedDockerURL]v2Manifest
 }
 
-func NewRepositoryBackend(username string, password string, insecure bool) *RepositoryBackend {
+func NewRepositoryBackend(username string, password string, insecureSkipVerify bool, insecureRegistry bool) *RepositoryBackend {
 	return &RepositoryBackend{
-		username:          username,
-		password:          password,
-		insecure:          insecure,
-		hostsV2Support:    make(map[string]bool),
-		hostsV2AuthTokens: make(map[string]map[string]string),
-		imageManifests:    make(map[types.ParsedDockerURL]v2Manifest),
+		username:           username,
+		password:           password,
+		insecureSkipVerify: insecureSkipVerify,
+		insecureRegistry:   insecureRegistry,
+		hostsV2Support:     make(map[string]bool),
+		hostsV2AuthTokens:  make(map[string]map[string]string),
+		imageManifests:     make(map[types.ParsedDockerURL]v2Manifest),
 	}
 }
 
@@ -69,7 +71,7 @@ func (rb *RepositoryBackend) BuildACI(layerNumber int, layerID string, dockerURL
 }
 
 func (rb *RepositoryBackend) protocol() string {
-	if rb.insecure {
+	if rb.insecureRegistry {
 		return "http://"
 	} else {
 		return "https://"

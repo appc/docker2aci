@@ -56,8 +56,8 @@ type Docker2ACIBackend interface {
 // temporary directory if tmpDir is "".
 // username and password can be passed if the image needs authentication.
 // It returns the list of generated ACI paths.
-func Convert(dockerURL string, squash bool, outputDir string, tmpDir string, username string, password string, insecure bool) ([]string, error) {
-	repositoryBackend := repository.NewRepositoryBackend(username, password, insecure)
+func Convert(dockerURL string, squash bool, outputDir string, tmpDir string, username string, password string, insecureSkipVerify bool, insecureRegistry bool) ([]string, error) {
+	repositoryBackend := repository.NewRepositoryBackend(username, password, insecureSkipVerify, insecureRegistry)
 	return convertReal(repositoryBackend, dockerURL, squash, outputDir, tmpDir)
 }
 
