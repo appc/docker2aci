@@ -22,6 +22,7 @@ import (
 	"strings"
 
 	"github.com/appc/docker2aci/lib"
+	"github.com/appc/docker2aci/lib/common"
 	"github.com/appc/docker2aci/lib/util"
 
 	"github.com/appc/spec/aci"
@@ -33,9 +34,10 @@ var (
 	flagImage    = flag.String("image", "", "When converting a local file, it selects a particular image to convert. Format: IMAGE_NAME[:TAG]")
 	flagDebug    = flag.Bool("debug", false, "Enables debug messages")
 	flagInsecure = flag.Bool("insecure", false, "Uses unencrypted connections when fetching images")
+	flagCompression = flag.String("compression", "gzip", "Type of compression to use; allowed values: gzip, none")
 )
 
-func runDocker2ACI(arg string, flagNoSquash bool, flagImage string, flagDebug bool, flagInsecure bool) error {
+func runDocker2ACI(arg string, flagNoSquash bool, flagImage string, flagDebug bool, flagInsecure bool, flagCompression string) error {
 	if flagDebug {
 		util.InitDebug()
 	}
@@ -47,6 +49,18 @@ func runDocker2ACI(arg string, flagNoSquash bool, flagImage string, flagDebug bo
 	if err != nil {
 		return fmt.Errorf("error parsing argument: %v", err)
 	}
+
+	var compression common.Compression
+
+	switch(flagCompression) {
+	case "none":
+		compression = common.NoCompression
+	case "gzip":
+		compression = common.GzipCompression
+	default:
+		return fmt.Errorf("unknown compression method: %s", flagCompression)
+	}
+
 	if u.Scheme == "docker" {
 		if flagImage != "" {
 			return fmt.Errorf("flag --image works only with files.")
@@ -61,9 +75,9 @@ func runDocker2ACI(arg string, flagNoSquash bool, flagImage string, flagDebug bo
 			return fmt.Errorf("error reading .dockercfg file: %v", err)
 		}
 
-		aciLayerPaths, err = docker2aci.Convert(dockerURL, squash, ".", os.TempDir(), username, password, flagInsecure)
+		aciLayerPaths, err = docker2aci.Convert(dockerURL, squash, ".", os.TempDir(), compression, username, password, flagInsecure)
 	} else {
-		aciLayerPaths, err = docker2aci.ConvertFile(flagImage, arg, squash, ".", os.TempDir())
+		aciLayerPaths, err = docker2aci.ConvertFile(flagImage, arg, squash, ".", os.TempDir(), compression)
 	}
 	if err != nil {
 		return fmt.Errorf("conversion error: %v", err)
@@ -138,7 +152,7 @@ func getManifest(aciPath string) (*schema.ImageManifest, error) {
 
 func usage() {
 	fmt.Fprintf(os.Stderr, "Usage of %s:\n", os.Args[0])
-	fmt.Fprintf(os.Stderr, "docker2aci [--debug] [--nosquash] IMAGE\n")
+	fmt.Fprintf(os.Stderr, "docker2aci [--debug] [--nosquash] [--compression=(gzip|none)] IMAGE\n")
 	fmt.Fprintf(os.Stderr, "  Where IMAGE is\n")
 	fmt.Fprintf(os.Stderr, "    [--image=IMAGE_NAME[:TAG]] FILEPATH\n")
 	fmt.Fprintf(os.Stderr, "  or\n")
@@ -157,7 +171,7 @@ func main() {
 		return
 	}
 
-	if err := runDocker2ACI(args[0], *flagNoSquash, *flagImage, *flagDebug, *flagInsecure); err != nil {
+	if err := runDocker2ACI(args[0], *flagNoSquash, *flagImage, *flagDebug, *flagInsecure, *flagCompression); err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		os.Exit(1)
 	}

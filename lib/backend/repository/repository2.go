@@ -91,7 +91,7 @@ func (rb *RepositoryBackend) getImageInfoV2(dockerURL *types.ParsedDockerURL) ([
 	return layers, dockerURL, nil
 }
 
-func (rb *RepositoryBackend) buildACIV2(layerNumber int, layerID string, dockerURL *types.ParsedDockerURL, outputDir string, tmpBaseDir string, curPwl []string, compress bool) (string, *schema.ImageManifest, error) {
+func (rb *RepositoryBackend) buildACIV2(layerNumber int, layerID string, dockerURL *types.ParsedDockerURL, outputDir string, tmpBaseDir string, curPwl []string, compression common.Compression) (string, *schema.ImageManifest, error) {
 	manifest := rb.imageManifests[*dockerURL]
 
 	layerIndex, err := getLayerIndex(layerID, manifest)
@@ -121,7 +121,7 @@ func (rb *RepositoryBackend) buildACIV2(layerNumber int, layerID string, dockerU
 	defer layerFile.Close()
 
 	util.Debug("Generating layer ACI...")
-	aciPath, aciManifest, err := common.GenerateACI(layerNumber, layerData, dockerURL, outputDir, layerFile, curPwl, compress)
+	aciPath, aciManifest, err := common.GenerateACI(layerNumber, layerData, dockerURL, outputDir, layerFile, curPwl, compression)
 	if err != nil {
 		return "", nil, fmt.Errorf("error generating ACI: %v", err)
 	}

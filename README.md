@@ -8,7 +8,8 @@ Docker registry URL. It gets all the layers of a Docker image and squashes them
 into an ACI image. Optionally, it can generate one ACI for each layer, setting
 the correct dependencies.
 
-All ACIs generated are compressed with gzip.
+All ACIs generated are compressed with gzip by default. Compression can be
+disabled by specifying `--compression=none`.
 
 
 ## Build
