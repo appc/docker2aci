@@ -15,12 +15,12 @@ if ! which rkt > /dev/null ; then
 		exit 1
 	fi
 	pushd $SEMAPHORE_CACHE_DIR
-	if ! md5sum -c $TESTDIR/rkt-v0.12.0.md5sum; then
-		wget https://github.com/coreos/rkt/releases/download/v0.12.0/rkt-v0.12.0.tar.gz
+	if ! md5sum -c $TESTDIR/rkt-v0.16.0.md5sum; then
+		wget https://github.com/coreos/rkt/releases/download/v0.16.0/rkt-v0.16.0.tar.gz
 	fi
-	md5sum -c $TESTDIR/rkt-v0.12.0.md5sum
-	tar xf rkt-v0.12.0.tar.gz
-	export PATH=$PATH:$PWD/rkt-v0.12.0/
+	md5sum -c $TESTDIR/rkt-v0.16.0.md5sum
+	tar xf rkt-v0.16.0.tar.gz
+	export PATH=$PATH:$PWD/rkt-v0.16.0/
 	popd
 fi
 RKT=$(which rkt)
