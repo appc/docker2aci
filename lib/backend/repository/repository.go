@@ -64,7 +64,6 @@ func (rb *RepositoryBackend) GetImageInfo(url string) ([]string, *types.ParsedDo
 			return nil, nil, err
 		}
 		rb.schema = URLSchema + "://"
-		supportsV2 = false
 		rb.hostsV2Support[dockerURL.IndexURL] = supportsV2
 	}
 
