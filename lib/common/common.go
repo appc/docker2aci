@@ -46,6 +46,10 @@ func ParseDockerURL(arg string) (*types.ParsedDockerURL, error) {
 		return nil, errors.New("empty Docker image reference")
 	}
 
+	if !referenceRegexp.MatchString(arg) {
+		return nil, fmt.Errorf("invalid Docker image reference %q", arg)
+	}
+
 	taglessRemote, tag := parseRepositoryTag(arg)
 	if tag == "" {
 		tag = defaultTag
