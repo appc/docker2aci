@@ -38,9 +38,7 @@ func SplitReposName(reposName string) (string, string) {
 	if len(nameParts) == 1 || (!strings.Contains(nameParts[0], ".") &&
 		!strings.Contains(nameParts[0], ":") && nameParts[0] != "localhost") {
 		// This is a Docker Index repos (ex: samalba/hipache or ubuntu)
-		// The URL for the index is different depending on the version of the
-		// API used to fetch it, so it cannot be inferred here.
-		indexName = ""
+		indexName = defaultIndexURL
 		remoteName = reposName
 	} else {
 		indexName = nameParts[0]

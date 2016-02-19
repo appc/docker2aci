@@ -51,12 +51,12 @@ func ParseDockerURL(arg string) *types.ParsedDockerURL {
 	}
 	indexURL, imageName := SplitReposName(taglessRemote)
 
-	if indexURL == "" && !strings.Contains(imageName, "/") {
+	// the Docker client considers images referenced only by a name (e.g.
+	// "busybox" or "ubuntu") as valid, and, in that case, it adds the
+	// "library/" prefix because that's how they're stored in the official
+	// registry
+	if indexURL == defaultIndexURL && !strings.Contains(imageName, "/") {
 		imageName = "library/" + imageName
-	}
-
-	if indexURL == "" {
-		indexURL = defaultIndexURL
 	}
 
 	return &types.ParsedDockerURL{
