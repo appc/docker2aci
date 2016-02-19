@@ -4,6 +4,7 @@ import (
 	"archive/tar"
 	"compress/gzip"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -40,9 +41,13 @@ const (
 	GzipCompression
 )
 
-func ParseDockerURL(arg string) *types.ParsedDockerURL {
+func ParseDockerURL(arg string) (*types.ParsedDockerURL, error) {
 	if arg == "" {
-		return nil
+		return nil, errors.New("empty Docker image reference")
+	}
+
+	if !referenceRegexp.MatchString(arg) {
+		return nil, fmt.Errorf("invalid Docker image reference %q", arg)
 	}
 
 	taglessRemote, tag := parseRepositoryTag(arg)
@@ -63,7 +68,7 @@ func ParseDockerURL(arg string) *types.ParsedDockerURL {
 		IndexURL:  indexURL,
 		ImageName: imageName,
 		Tag:       tag,
-	}
+	}, nil
 }
 
 func GenerateACI(layerNumber int, layerData types.DockerImageData, dockerURL *types.ParsedDockerURL, outputDir string, layerFile *os.File, curPwl []string, compression Compression) (string, *schema.ImageManifest, error) {

@@ -30,10 +30,10 @@ import (
 )
 
 var (
-	flagNoSquash = flag.Bool("nosquash", false, "Don't squash layers and output every layer as ACI")
-	flagImage    = flag.String("image", "", "When converting a local file, it selects a particular image to convert. Format: IMAGE_NAME[:TAG]")
-	flagDebug    = flag.Bool("debug", false, "Enables debug messages")
-	flagInsecure = flag.Bool("insecure", false, "Uses unencrypted connections when fetching images")
+	flagNoSquash    = flag.Bool("nosquash", false, "Don't squash layers and output every layer as ACI")
+	flagImage       = flag.String("image", "", "When converting a local file, it selects a particular image to convert. Format: IMAGE_NAME[:TAG]")
+	flagDebug       = flag.Bool("debug", false, "Enables debug messages")
+	flagInsecure    = flag.Bool("insecure", false, "Uses unencrypted connections when fetching images")
 	flagCompression = flag.String("compression", "gzip", "Type of compression to use; allowed values: gzip, none")
 )
 
@@ -52,7 +52,7 @@ func runDocker2ACI(arg string, flagNoSquash bool, flagImage string, flagDebug bo
 
 	var compression common.Compression
 
-	switch(flagCompression) {
+	switch flagCompression {
 	case "none":
 		compression = common.NoCompression
 	case "gzip":
