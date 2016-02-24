@@ -26,6 +26,7 @@ import (
 const (
 	defaultTag              = "latest"
 	defaultIndexURL         = "registry-1.docker.io"
+	defaultIndexURLAuth     = "https://index.docker.io/v1/"
 	schemaVersion           = "0.7.0"
 	appcDockerRegistryURL   = "appc.io/docker/registryurl"
 	appcDockerRepository    = "appc.io/docker/repository"
