@@ -433,10 +433,14 @@ func writeACI(layer io.ReadSeeker, manifest schema.ImageManifest, curPwl []strin
 	}
 	newPwl := subtractWhiteouts(curPwl, whiteouts)
 
-	manifest.PathWhitelist, err = writeStdioSymlinks(trw, fileMap, newPwl)
+	newPwl, err = writeStdioSymlinks(trw, fileMap, newPwl)
 	if err != nil {
 		return nil, err
 	}
+	// Let's copy the newly generated PathWhitelist to avoid unintended
+	// side-effects
+	manifest.PathWhitelist = make([]string, len(newPwl))
+	copy(manifest.PathWhitelist, newPwl)
 
 	if err := WriteManifest(trw, manifest); err != nil {
 		return nil, fmt.Errorf("error writing manifest: %v", err)
