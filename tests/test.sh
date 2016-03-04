@@ -5,6 +5,7 @@ set -e
 DOCKER2ACI=../bin/docker2aci
 PREFIX=docker2aci-tests
 TESTDIR=$(dirname $(realpath $0))
+RKTVERSION=v1.1.0
 
 cd $TESTDIR
 
@@ -15,12 +16,12 @@ if ! which rkt > /dev/null ; then
 		exit 1
 	fi
 	pushd $SEMAPHORE_CACHE_DIR
-	if ! md5sum -c $TESTDIR/rkt-v0.16.0.md5sum; then
-		wget https://github.com/coreos/rkt/releases/download/v0.16.0/rkt-v0.16.0.tar.gz
+	if ! md5sum -c $TESTDIR/rkt-$RKTVERSION.md5sum; then
+		wget https://github.com/coreos/rkt/releases/download/$RKTVERSION/rkt-$RKTVERSION.tar.gz
 	fi
-	md5sum -c $TESTDIR/rkt-v0.16.0.md5sum
-	tar xf rkt-v0.16.0.tar.gz
-	export PATH=$PATH:$PWD/rkt-v0.16.0/
+	md5sum -c $TESTDIR/rkt-$RKTVERSION.md5sum
+	tar xf rkt-$RKTVERSION.tar.gz
+	export PATH=$PATH:$PWD/rkt-$RKTVERSION/
 	popd
 fi
 RKT=$(which rkt)
