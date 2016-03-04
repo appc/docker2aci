@@ -33,6 +33,8 @@ const (
 	appcDockerTag           = "appc.io/docker/tag"
 	appcDockerImageID       = "appc.io/docker/imageid"
 	appcDockerParentImageID = "appc.io/docker/parentimageid"
+	appcDockerEntrypoint    = "appc.io/docker/entrypoint"
+	appcDockerCmd           = "appc.io/docker/cmd"
 )
 
 type Compression int
@@ -193,10 +195,14 @@ func GenerateManifest(layerData types.DockerImageData, dockerURL *types.ParsedDo
 	annotations = append(annotations, appctypes.Annotation{Name: *appctypes.MustACIdentifier(appcDockerImageID), Value: layerData.ID})
 	annotations = append(annotations, appctypes.Annotation{Name: *appctypes.MustACIdentifier(appcDockerParentImageID), Value: layerData.Parent})
 
-	genManifest.Labels = labels
-	genManifest.Annotations = annotations
-
 	if dockerConfig != nil {
+		if len(dockerConfig.Entrypoint) > 0 {
+			annotations = append(annotations, appctypes.Annotation{Name: *appctypes.MustACIdentifier(appcDockerEntrypoint), Value: strings.Join(dockerConfig.Entrypoint, " ")})
+		}
+		if len(dockerConfig.Cmd) > 0 {
+			annotations = append(annotations, appctypes.Annotation{Name: *appctypes.MustACIdentifier(appcDockerCmd), Value: strings.Join(dockerConfig.Cmd, " ")})
+		}
+
 		exec := getExecCommand(dockerConfig.Entrypoint, dockerConfig.Cmd)
 		if exec != nil {
 			user, group := parseDockerUser(dockerConfig.User)
@@ -242,6 +248,9 @@ func GenerateManifest(layerData types.DockerImageData, dockerURL *types.ParsedDo
 
 		annotations = append(annotations, appctypes.Annotation{Name: *appctypes.MustACIdentifier(appcDockerTag), Value: dockerURL.Tag})
 	}
+
+	genManifest.Labels = labels
+	genManifest.Annotations = annotations
 
 	return genManifest, nil
 }
