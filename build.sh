@@ -1,4 +1,6 @@
-#!/bin/bash -e
+#!/usr/bin/env bash
+
+set -e
 
 ORG_PATH="github.com/appc"
 REPO_PATH="${ORG_PATH}/docker2aci"
