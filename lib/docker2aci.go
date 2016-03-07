@@ -114,7 +114,7 @@ func convertReal(backend Docker2ACIBackend, dockerURL string, squash bool, outpu
 		defer os.RemoveAll(layersOutputDir)
 	}
 
-	conversionStore := NewConversionStore()
+	conversionStore := newConversionStore()
 
 	var images acirenderer.Images
 	var aciLayerPaths []string
@@ -146,7 +146,7 @@ func convertReal(backend Docker2ACIBackend, dockerURL string, squash bool, outpu
 	// acirenderer expects images in order from upper to base layer
 	images = util.ReverseImages(images)
 	if squash {
-		squashedImagePath, err := SquashLayers(images, conversionStore, *parsedDockerURL, outputDir, compression)
+		squashedImagePath, err := squashLayers(images, conversionStore, *parsedDockerURL, outputDir, compression)
 		if err != nil {
 			return nil, fmt.Errorf("error squashing image: %v", err)
 		}
@@ -156,9 +156,9 @@ func convertReal(backend Docker2ACIBackend, dockerURL string, squash bool, outpu
 	return aciLayerPaths, nil
 }
 
-// SquashLayers receives a list of ACI layer file names ordered from base image
+// squashLayers receives a list of ACI layer file names ordered from base image
 // to application image and squashes them into one ACI
-func SquashLayers(images []acirenderer.Image, aciRegistry acirenderer.ACIRegistry, parsedDockerURL types.ParsedDockerURL, outputDir string, compression common.Compression) (path string, err error) {
+func squashLayers(images []acirenderer.Image, aciRegistry acirenderer.ACIRegistry, parsedDockerURL types.ParsedDockerURL, outputDir string, compression common.Compression) (path string, err error) {
 	util.Debug("Squashing layers...")
 	util.Debug("Rendering ACI...")
 	renderedACI, err := acirenderer.GetRenderedACIFromList(images, aciRegistry)

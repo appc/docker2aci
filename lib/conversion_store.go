@@ -23,18 +23,18 @@ type aciInfo struct {
 	ImageManifest *schema.ImageManifest
 }
 
-// ConversionStore is an simple implementation of the acirenderer.ACIRegistry
+// conversionStore is an simple implementation of the acirenderer.ACIRegistry
 // interface. It stores the Docker layers converted to ACI so we can take
 // advantage of acirenderer to generate a squashed ACI Image.
-type ConversionStore struct {
+type conversionStore struct {
 	acis map[string]*aciInfo
 }
 
-func NewConversionStore() *ConversionStore {
-	return &ConversionStore{acis: make(map[string]*aciInfo)}
+func newConversionStore() *conversionStore {
+	return &conversionStore{acis: make(map[string]*aciInfo)}
 }
 
-func (ms *ConversionStore) WriteACI(path string) (string, error) {
+func (ms *conversionStore) WriteACI(path string) (string, error) {
 	f, err := os.Open(path)
 	if err != nil {
 		return "", err
@@ -65,7 +65,7 @@ func (ms *ConversionStore) WriteACI(path string) (string, error) {
 	return key, nil
 }
 
-func (ms *ConversionStore) GetImageManifest(key string) (*schema.ImageManifest, error) {
+func (ms *conversionStore) GetImageManifest(key string) (*schema.ImageManifest, error) {
 	aci, ok := ms.acis[key]
 	if !ok {
 		return nil, fmt.Errorf("aci with key: %s not found", key)
@@ -73,7 +73,7 @@ func (ms *ConversionStore) GetImageManifest(key string) (*schema.ImageManifest, 
 	return aci.ImageManifest, nil
 }
 
-func (ms *ConversionStore) GetACI(name types.ACIdentifier, labels types.Labels) (string, error) {
+func (ms *conversionStore) GetACI(name types.ACIdentifier, labels types.Labels) (string, error) {
 	for _, aci := range ms.acis {
 		// we implement this function to comply with the interface so don't
 		// bother implementing a proper label check
@@ -84,7 +84,7 @@ func (ms *ConversionStore) GetACI(name types.ACIdentifier, labels types.Labels) 
 	return "", fmt.Errorf("aci not found")
 }
 
-func (ms *ConversionStore) ReadStream(key string) (io.ReadCloser, error) {
+func (ms *conversionStore) ReadStream(key string) (io.ReadCloser, error) {
 	img, ok := ms.acis[key]
 	if !ok {
 		return nil, fmt.Errorf("stream for key: %s not found", key)
@@ -102,11 +102,11 @@ func (ms *ConversionStore) ReadStream(key string) (io.ReadCloser, error) {
 	return tr, nil
 }
 
-func (ms *ConversionStore) ResolveKey(key string) (string, error) {
+func (ms *conversionStore) ResolveKey(key string) (string, error) {
 	return key, nil
 }
 
-func (ms *ConversionStore) HashToKey(h hash.Hash) string {
+func (ms *conversionStore) HashToKey(h hash.Hash) string {
 	s := h.Sum(nil)
 	return fmt.Sprintf("%s%x", hashPrefix, s)
 }
