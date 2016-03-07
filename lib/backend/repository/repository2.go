@@ -358,7 +358,8 @@ func (rb *RepositoryBackend) makeRequest(req *http.Request, repo string) (*http.
 	}
 	// The scope can be empty if we're not getting a token for a specific repo
 	if scope == "" && repo != "" {
-		return nil, fmt.Errorf("missing scope in bearer auth challenge")
+		// If the scope is empty and it shouldn't be, we can infer it based on the repo
+		scope = fmt.Sprintf("repository:%s:pull", repo)
 	}
 
 	authReq, err := http.NewRequest("GET", realm, nil)
