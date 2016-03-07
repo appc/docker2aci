@@ -188,7 +188,7 @@ func main() {
 
 	if len(args) < 1 {
 		usage()
-		return
+		os.Exit(2)
 	}
 
 	if err := runDocker2ACI(args[0], *flagNoSquash, *flagImage, *flagDebug, *flagInsecure, *flagCompression); err != nil {
