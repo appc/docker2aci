@@ -42,48 +42,52 @@ type Docker2ACIBackend interface {
 	BuildACI(layerNumber int, layerID string, dockerURL *types.ParsedDockerURL, outputDir string, tmpBaseDir string, curPWl []string, compression common.Compression) (string, *schema.ImageManifest, error)
 }
 
-// Convert generates ACI images from docker registry URLs.
+type CommonConfig struct {
+	Squash      bool               // squash the layers in one file
+	OutputDir   string             // where to put the resulting ACI
+	TmpDir      string             // directory to use for temporary files
+	Compression common.Compression // which compression to use for the resulting file(s)
+}
+
+type RemoteConfig struct {
+	CommonConfig
+	Username string // username to use if the image to convert needs authentication
+	Password string // password to use if the image to convert needs authentication
+	Insecure bool   // allow converting from insecure repos
+}
+
+type FileConfig struct {
+	CommonConfig
+	DockerURL string // select an image if there are several images/tags in the file, Syntax: "{docker registry URL}/{image name}:{tag}"
+}
+
+// ConvertRepo generates ACI images from docker registry URLs.
 // It takes as input a dockerURL of the form:
 //
 //     {registry URL}/{repository}:{reference[tag|digest]}
 //
 // It then gets all the layers of the requested image and converts each of
 // them to ACI.
-// If the squash flag is true, it squashes all the layers in one file and
-// places this file in outputDir; if it is false, it places every layer in its
-// own ACI in outputDir.
-// It will use the temporary directory specified by tmpDir, or the default
-// temporary directory if tmpDir is "".
-// username and password can be passed if the image needs authentication.
 // It returns the list of generated ACI paths.
-func Convert(dockerURL string, squash bool, outputDir string, tmpDir string, compression common.Compression, username string, password string, insecure bool) ([]string, error) {
-	repositoryBackend := repository.NewRepositoryBackend(username, password, insecure)
-	return convertReal(repositoryBackend, dockerURL, squash, outputDir, tmpDir, compression)
+func Convert(dockerURL string, config RemoteConfig) ([]string, error) {
+	repositoryBackend := repository.NewRepositoryBackend(config.Username, config.Password, config.Insecure)
+	return convertReal(repositoryBackend, dockerURL, config.Squash, config.OutputDir, config.TmpDir, config.Compression)
 }
 
 // ConvertFile generates ACI images from a file generated with "docker save".
 // If there are several images/tags in the file, a particular image can be
-// chosen with the syntax:
+// chosen via FileConfig.DockerURL.
 //
-//	{docker registry URL}/{image name}:{tag}
-//
-// It takes as input the docker-generated file
-//
-// If the squash flag is true, it squashes all the layers in one file and
-// places this file in outputDir; if it is false, it places every layer in its
-// own ACI in outputDir.
-// It will use the temporary directory specified by tmpDir, or the default
-// temporary directory if tmpDir is "".
 // It returns the list of generated ACI paths.
-func ConvertFile(dockerURL string, filePath string, squash bool, outputDir string, tmpDir string, compression common.Compression) ([]string, error) {
-	f, err := os.Open(filePath)
+func ConvertFile(dockerSavedFile string, config FileConfig) ([]string, error) {
+	f, err := os.Open(dockerSavedFile)
 	if err != nil {
 		return nil, fmt.Errorf("error opening file: %v", err)
 	}
 	defer f.Close()
 
 	fileBackend := file.NewFileBackend(f)
-	return convertReal(fileBackend, dockerURL, squash, outputDir, tmpDir, compression)
+	return convertReal(fileBackend, config.DockerURL, config.Squash, config.OutputDir, config.TmpDir, config.Compression)
 }
 
 // GetIndexName returns the docker index server from a docker URL.

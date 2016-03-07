@@ -61,6 +61,12 @@ func runDocker2ACI(arg string, flagNoSquash bool, flagImage string, flagDebug bo
 		return fmt.Errorf("unknown compression method: %s", flagCompression)
 	}
 
+	cfg := docker2aci.CommonConfig{
+		Squash:      squash,
+		OutputDir:   ".",
+		TmpDir:      os.TempDir(),
+		Compression: compression,
+	}
 	if u.Scheme == "docker" {
 		if flagImage != "" {
 			return fmt.Errorf("flag --image works only with files.")
@@ -74,10 +80,20 @@ func runDocker2ACI(arg string, flagNoSquash bool, flagImage string, flagDebug bo
 		if err != nil {
 			return fmt.Errorf("error reading .dockercfg file: %v", err)
 		}
+		remoteConfig := docker2aci.RemoteConfig{
+			CommonConfig: cfg,
+			Username:     username,
+			Password:     password,
+			Insecure:     flagInsecure,
+		}
 
-		aciLayerPaths, err = docker2aci.Convert(dockerURL, squash, ".", os.TempDir(), compression, username, password, flagInsecure)
+		aciLayerPaths, err = docker2aci.Convert(dockerURL, remoteConfig)
 	} else {
-		aciLayerPaths, err = docker2aci.ConvertFile(flagImage, arg, squash, ".", os.TempDir(), compression)
+		fileConfig := docker2aci.FileConfig{
+			CommonConfig: cfg,
+			DockerURL:    flagImage,
+		}
+		aciLayerPaths, err = docker2aci.ConvertFile(arg, fileConfig)
 	}
 	if err != nil {
 		return fmt.Errorf("conversion error: %v", err)
