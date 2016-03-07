@@ -88,13 +88,13 @@ func runDocker2ACI(arg string, flagNoSquash bool, flagImage string, flagDebug bo
 			Insecure:     flagInsecure,
 		}
 
-		aciLayerPaths, err = docker2aci.Convert(dockerURL, remoteConfig)
+		aciLayerPaths, err = docker2aci.ConvertRemoteRepo(dockerURL, remoteConfig)
 	} else {
 		fileConfig := docker2aci.FileConfig{
 			CommonConfig: cfg,
 			DockerURL:    flagImage,
 		}
-		aciLayerPaths, err = docker2aci.ConvertFile(arg, fileConfig)
+		aciLayerPaths, err = docker2aci.ConvertSavedFile(arg, fileConfig)
 		if serr, ok := err.(*file.ErrSeveralImages); ok {
 			err = fmt.Errorf("%s, use option --image with one of:\n\n%s", serr, strings.Join(serr.Images, "\n"))
 		}

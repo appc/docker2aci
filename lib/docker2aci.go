@@ -61,25 +61,25 @@ type FileConfig struct {
 	DockerURL string // select an image if there are several images/tags in the file, Syntax: "{docker registry URL}/{image name}:{tag}"
 }
 
-// ConvertRepo generates ACI images from docker registry URLs.
-// It takes as input a dockerURL of the form:
+// ConvertRemoteRepo generates ACI images from docker registry URLs.  It takes
+// as input a dockerURL of the form:
 //
 //     {registry URL}/{repository}:{reference[tag|digest]}
 //
 // It then gets all the layers of the requested image and converts each of
 // them to ACI.
 // It returns the list of generated ACI paths.
-func Convert(dockerURL string, config RemoteConfig) ([]string, error) {
+func ConvertRemoteRepo(dockerURL string, config RemoteConfig) ([]string, error) {
 	repositoryBackend := repository.NewRepositoryBackend(config.Username, config.Password, config.Insecure)
 	return convertReal(repositoryBackend, dockerURL, config.Squash, config.OutputDir, config.TmpDir, config.Compression)
 }
 
-// ConvertFile generates ACI images from a file generated with "docker save".
-// If there are several images/tags in the file, a particular image can be
-// chosen via FileConfig.DockerURL.
+// ConvertSavedFile generates ACI images from a file generated with "docker
+// save".  If there are several images/tags in the file, a particular image can
+// be chosen via FileConfig.DockerURL.
 //
 // It returns the list of generated ACI paths.
-func ConvertFile(dockerSavedFile string, config FileConfig) ([]string, error) {
+func ConvertSavedFile(dockerSavedFile string, config FileConfig) ([]string, error) {
 	f, err := os.Open(dockerSavedFile)
 	if err != nil {
 		return nil, fmt.Errorf("error opening file: %v", err)
