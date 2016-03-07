@@ -9,7 +9,6 @@ import (
 	"os"
 	"path"
 	"path/filepath"
-	"strings"
 
 	"github.com/appc/docker2aci/lib/common"
 	"github.com/appc/docker2aci/lib/types"
@@ -20,6 +19,15 @@ import (
 
 type FileBackend struct {
 	file *os.File
+}
+
+type ErrSeveralImages struct {
+	msg    string
+	Images []string
+}
+
+func (e *ErrSeveralImages) Error() string {
+	return e.msg
 }
 
 func NewFileBackend(file *os.File) *FileBackend {
@@ -37,7 +45,7 @@ func (lb *FileBackend) GetImageInfo(dockerURL string) ([]string, *types.ParsedDo
 
 	appImageID, parsedDockerURL, err := getImageID(lb.file, parsedDockerURL)
 	if err != nil {
-		return nil, nil, fmt.Errorf("error getting ImageID: %v", err)
+		return nil, nil, err
 	}
 
 	ancestry, err := getAncestry(lb.file, appImageID)
@@ -118,7 +126,10 @@ func getImageID(file *os.File, dockerURL *types.ParsedDockerURL) (string, *types
 					for key, _ := range repositories {
 						appNames = append(appNames, key)
 					}
-					return fmt.Errorf("several images found, use option --image with one of:\n\n%s", strings.Join(appNames, "\n"))
+					return &ErrSeveralImages{
+						msg:    "several images found",
+						Images: appNames,
+					}
 				default:
 					return fmt.Errorf("no images found")
 				}

@@ -22,6 +22,7 @@ import (
 	"strings"
 
 	"github.com/appc/docker2aci/lib"
+	"github.com/appc/docker2aci/lib/backend/file"
 	"github.com/appc/docker2aci/lib/common"
 	"github.com/appc/docker2aci/lib/util"
 
@@ -94,6 +95,9 @@ func runDocker2ACI(arg string, flagNoSquash bool, flagImage string, flagDebug bo
 			DockerURL:    flagImage,
 		}
 		aciLayerPaths, err = docker2aci.ConvertFile(arg, fileConfig)
+		if serr, ok := err.(*file.ErrSeveralImages); ok {
+			err = fmt.Errorf("%s, use option --image with one of:\n\n%s", serr, strings.Join(serr.Images, "\n"))
+		}
 	}
 	if err != nil {
 		return fmt.Errorf("conversion error: %v", err)
