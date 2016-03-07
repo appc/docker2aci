@@ -31,14 +31,29 @@ import (
 )
 
 var (
-	flagNoSquash    = flag.Bool("nosquash", false, "Don't squash layers and output every layer as ACI")
-	flagImage       = flag.String("image", "", "When converting a local file, it selects a particular image to convert. Format: IMAGE_NAME[:TAG]")
-	flagDebug       = flag.Bool("debug", false, "Enables debug messages")
-	flagInsecure    = flag.Bool("insecure", false, "Uses unencrypted connections when fetching images")
-	flagCompression = flag.String("compression", "gzip", "Type of compression to use; allowed values: gzip, none")
+	flagNoSquash    bool
+	flagImage       string
+	flagDebug       bool
+	flagInsecure    bool
+	flagCompression string
+	flagVersion     bool
 )
 
-func runDocker2ACI(arg string, flagNoSquash bool, flagImage string, flagDebug bool, flagInsecure bool, flagCompression string) error {
+func init() {
+	flag.BoolVar(&flagNoSquash, "nosquash", false, "Don't squash layers and output every layer as ACI")
+	flag.StringVar(&flagImage, "image", "", "When converting a local file, it selects a particular image to convert. Format: IMAGE_NAME[:TAG]")
+	flag.BoolVar(&flagDebug, "debug", false, "Enables debug messages")
+	flag.BoolVar(&flagInsecure, "insecure", false, "Uses unencrypted connections when fetching images")
+	flag.StringVar(&flagCompression, "compression", "gzip", "Type of compression to use; allowed values: gzip, none")
+	flag.BoolVar(&flagVersion, "version", false, "Print version")
+}
+
+func printVersion() {
+	fmt.Println("docker2aci version", docker2aci.Version)
+	fmt.Println("appc version", docker2aci.AppcVersion)
+}
+
+func runDocker2ACI(arg string) error {
 	if flagDebug {
 		util.InitDebug()
 	}
@@ -186,12 +201,17 @@ func main() {
 	flag.Parse()
 	args := flag.Args()
 
+	if flagVersion {
+		printVersion()
+		return
+	}
+
 	if len(args) < 1 {
 		usage()
 		os.Exit(2)
 	}
 
-	if err := runDocker2ACI(args[0], *flagNoSquash, *flagImage, *flagDebug, *flagInsecure, *flagCompression); err != nil {
+	if err := runDocker2ACI(args[0]); err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		os.Exit(1)
 	}
