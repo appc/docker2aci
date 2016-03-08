@@ -14,16 +14,9 @@ disabled by specifying `--compression=none`.
 
 ## Build
 
-Installation is simple as:
-
-	go get github.com/appc/docker2aci
-
-or as involved as:
-
 	git clone git://github.com/appc/docker2aci
 	cd docker2aci
-	go get -d ./...
-	go build
+	./build.sh
 
 ## Volumes
 

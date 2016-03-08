@@ -22,6 +22,7 @@ import (
 	"strings"
 
 	"github.com/appc/docker2aci/lib"
+	"github.com/appc/docker2aci/lib/backend/file"
 	"github.com/appc/docker2aci/lib/common"
 	"github.com/appc/docker2aci/lib/util"
 
@@ -30,14 +31,29 @@ import (
 )
 
 var (
-	flagNoSquash    = flag.Bool("nosquash", false, "Don't squash layers and output every layer as ACI")
-	flagImage       = flag.String("image", "", "When converting a local file, it selects a particular image to convert. Format: IMAGE_NAME[:TAG]")
-	flagDebug       = flag.Bool("debug", false, "Enables debug messages")
-	flagInsecure    = flag.Bool("insecure", false, "Uses unencrypted connections when fetching images")
-	flagCompression = flag.String("compression", "gzip", "Type of compression to use; allowed values: gzip, none")
+	flagNoSquash    bool
+	flagImage       string
+	flagDebug       bool
+	flagInsecure    bool
+	flagCompression string
+	flagVersion     bool
 )
 
-func runDocker2ACI(arg string, flagNoSquash bool, flagImage string, flagDebug bool, flagInsecure bool, flagCompression string) error {
+func init() {
+	flag.BoolVar(&flagNoSquash, "nosquash", false, "Don't squash layers and output every layer as ACI")
+	flag.StringVar(&flagImage, "image", "", "When converting a local file, it selects a particular image to convert. Format: IMAGE_NAME[:TAG]")
+	flag.BoolVar(&flagDebug, "debug", false, "Enables debug messages")
+	flag.BoolVar(&flagInsecure, "insecure", false, "Uses unencrypted connections when fetching images")
+	flag.StringVar(&flagCompression, "compression", "gzip", "Type of compression to use; allowed values: gzip, none")
+	flag.BoolVar(&flagVersion, "version", false, "Print version")
+}
+
+func printVersion() {
+	fmt.Println("docker2aci version", docker2aci.Version)
+	fmt.Println("appc version", docker2aci.AppcVersion)
+}
+
+func runDocker2ACI(arg string) error {
 	if flagDebug {
 		util.InitDebug()
 	}
@@ -61,6 +77,12 @@ func runDocker2ACI(arg string, flagNoSquash bool, flagImage string, flagDebug bo
 		return fmt.Errorf("unknown compression method: %s", flagCompression)
 	}
 
+	cfg := docker2aci.CommonConfig{
+		Squash:      squash,
+		OutputDir:   ".",
+		TmpDir:      os.TempDir(),
+		Compression: compression,
+	}
 	if u.Scheme == "docker" {
 		if flagImage != "" {
 			return fmt.Errorf("flag --image works only with files.")
@@ -74,10 +96,23 @@ func runDocker2ACI(arg string, flagNoSquash bool, flagImage string, flagDebug bo
 		if err != nil {
 			return fmt.Errorf("error reading .dockercfg file: %v", err)
 		}
+		remoteConfig := docker2aci.RemoteConfig{
+			CommonConfig: cfg,
+			Username:     username,
+			Password:     password,
+			Insecure:     flagInsecure,
+		}
 
-		aciLayerPaths, err = docker2aci.Convert(dockerURL, squash, ".", os.TempDir(), compression, username, password, flagInsecure)
+		aciLayerPaths, err = docker2aci.ConvertRemoteRepo(dockerURL, remoteConfig)
 	} else {
-		aciLayerPaths, err = docker2aci.ConvertFile(flagImage, arg, squash, ".", os.TempDir(), compression)
+		fileConfig := docker2aci.FileConfig{
+			CommonConfig: cfg,
+			DockerURL:    flagImage,
+		}
+		aciLayerPaths, err = docker2aci.ConvertSavedFile(arg, fileConfig)
+		if serr, ok := err.(*file.ErrSeveralImages); ok {
+			err = fmt.Errorf("%s, use option --image with one of:\n\n%s", serr, strings.Join(serr.Images, "\n"))
+		}
 	}
 	if err != nil {
 		return fmt.Errorf("conversion error: %v", err)
@@ -166,12 +201,17 @@ func main() {
 	flag.Parse()
 	args := flag.Args()
 
-	if len(args) < 1 {
-		usage()
+	if flagVersion {
+		printVersion()
 		return
 	}
 
-	if err := runDocker2ACI(args[0], *flagNoSquash, *flagImage, *flagDebug, *flagInsecure, *flagCompression); err != nil {
+	if len(args) < 1 {
+		usage()
+		os.Exit(2)
+	}
+
+	if err := runDocker2ACI(args[0]); err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		os.Exit(1)
 	}
