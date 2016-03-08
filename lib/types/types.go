@@ -13,6 +13,9 @@
 // limitations under the License.
 
 // Package types defines Docker image, URL and configuration types.
+//
+// Note: this package is an implementation detail and shouldn't be used outside
+// of docker2aci.
 package types
 
 // ParsedDockerURL represents a parsed Docker URL.

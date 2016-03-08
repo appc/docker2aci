@@ -14,6 +14,9 @@
 
 // Package file is an implementation of Docker2ACIBackend for files saved via
 // "docker save".
+//
+// Note: this package is an implementation detail and shouldn't be used outside
+// of docker2aci.
 package file
 
 import (

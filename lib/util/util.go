@@ -13,6 +13,9 @@
 // limitations under the License.
 
 // Package util defines convenience functions for handling slices and debugging.
+//
+// Note: this package is an implementation detail and shouldn't be used outside
+// of docker2aci.
 package util
 
 import (

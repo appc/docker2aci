@@ -14,6 +14,9 @@
 
 // Package repository is an implementation of Docker2ACIBackend for Docker
 // remote registries.
+//
+// Note: this package is an implementation detail and shouldn't be used outside
+// of docker2aci.
 package repository
 
 import (
