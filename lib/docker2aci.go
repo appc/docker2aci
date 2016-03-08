@@ -38,19 +38,6 @@ import (
 	appctypes "github.com/appc/spec/schema/types"
 )
 
-// Docker2ACIBackend is the interface that abstracts converting Docker layers
-// to ACI from where they're stored (remote or file).
-//
-// GetImageInfo takes a Docker URL and returns a list of layers and the parsed
-// Docker URL.
-//
-// BuildACI takes a Docker layer, converts it to ACI and returns its output
-// path and its converted ImageManifest.
-type Docker2ACIBackend interface {
-	GetImageInfo(dockerUrl string) ([]string, *types.ParsedDockerURL, error)
-	BuildACI(layerNumber int, layerID string, dockerURL *types.ParsedDockerURL, outputDir string, tmpBaseDir string, curPWl []string, compression common.Compression) (string, *schema.ImageManifest, error)
-}
-
 // CommonConfig represents the shared configuration options for converting
 // Docker images.
 type CommonConfig struct {
@@ -117,7 +104,7 @@ func GetDockercfgAuth(indexServer string) (string, string, error) {
 	return internal.GetAuthInfo(indexServer)
 }
 
-func convertReal(backend Docker2ACIBackend, dockerURL string, squash bool, outputDir string, tmpDir string, compression common.Compression) ([]string, error) {
+func convertReal(backend internal.Docker2ACIBackend, dockerURL string, squash bool, outputDir string, tmpDir string, compression common.Compression) ([]string, error) {
 	util.Debug("Getting image info...")
 	ancestry, parsedDockerURL, err := backend.GetImageInfo(dockerURL)
 	if err != nil {

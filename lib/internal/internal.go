@@ -56,6 +56,19 @@ const (
 	appcDockerCmd           = "appc.io/docker/cmd"
 )
 
+// Docker2ACIBackend is the interface that abstracts converting Docker layers
+// to ACI from where they're stored (remote or file).
+//
+// GetImageInfo takes a Docker URL and returns a list of layers and the parsed
+// Docker URL.
+//
+// BuildACI takes a Docker layer, converts it to ACI and returns its output
+// path and its converted ImageManifest.
+type Docker2ACIBackend interface {
+	GetImageInfo(dockerUrl string) ([]string, *types.ParsedDockerURL, error)
+	BuildACI(layerNumber int, layerID string, dockerURL *types.ParsedDockerURL, outputDir string, tmpBaseDir string, curPWl []string, compression common.Compression) (string, *schema.ImageManifest, error)
+}
+
 // ParseDockerURL takes a Docker URL and returns a ParsedDockerURL with its
 // index URL, image name, and tag.
 func ParseDockerURL(arg string) (*types.ParsedDockerURL, error) {
