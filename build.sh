@@ -4,8 +4,7 @@ set -e
 
 ORG_PATH="github.com/appc"
 REPO_PATH="${ORG_PATH}/docker2aci"
-# TODO: use "git describe --dirty" when we actually have tags pushed
-VERSION=$(git rev-parse --short HEAD)
+VERSION=$(git describe --dirty)
 GLDFLAGS="-X github.com/appc/docker2aci/lib.Version=${VERSION}"
 
 if [ ! -h gopath/src/${REPO_PATH} ]; then
