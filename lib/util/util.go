@@ -62,10 +62,6 @@ func printTo(w io.Writer, i ...interface{}) {
 	fmt.Fprintln(w, strings.TrimSuffix(s, "\n"))
 }
 
-func Warn(i ...interface{}) {
-	printTo(os.Stderr, i...)
-}
-
 func Info(i ...interface{}) {
 	printTo(os.Stderr, i...)
 }
