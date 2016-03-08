@@ -30,6 +30,7 @@ import (
 	"path/filepath"
 
 	"github.com/appc/docker2aci/lib/common"
+	"github.com/appc/docker2aci/lib/internal"
 	"github.com/appc/docker2aci/lib/types"
 	"github.com/appc/docker2aci/lib/util"
 	"github.com/appc/docker2aci/tarball"
@@ -47,7 +48,7 @@ func NewFileBackend(file *os.File) *FileBackend {
 }
 
 func (lb *FileBackend) GetImageInfo(dockerURL string) ([]string, *types.ParsedDockerURL, error) {
-	parsedDockerURL, err := common.ParseDockerURL(dockerURL)
+	parsedDockerURL, err := internal.ParseDockerURL(dockerURL)
 	if err != nil {
 		// a missing Docker URL could mean that the file only contains one
 		// image, so we ignore the error here, we'll handle it in getImageID
@@ -93,7 +94,7 @@ func (lb *FileBackend) BuildACI(layerNumber int, layerID string, dockerURL *type
 	defer layerFile.Close()
 
 	util.Debug("Generating layer ACI...")
-	aciPath, manifest, err := common.GenerateACI(layerNumber, layerData, dockerURL, outputDir, layerFile, curPwl, compression)
+	aciPath, manifest, err := internal.GenerateACI(layerNumber, layerData, dockerURL, outputDir, layerFile, curPwl, compression)
 	if err != nil {
 		return "", nil, fmt.Errorf("error generating ACI: %v", err)
 	}

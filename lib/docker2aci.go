@@ -29,6 +29,7 @@ import (
 	"github.com/appc/docker2aci/lib/backend/file"
 	"github.com/appc/docker2aci/lib/backend/repository"
 	"github.com/appc/docker2aci/lib/common"
+	"github.com/appc/docker2aci/lib/internal"
 	"github.com/appc/docker2aci/lib/types"
 	"github.com/appc/docker2aci/lib/util"
 	"github.com/appc/docker2aci/tarball"
@@ -106,14 +107,14 @@ func ConvertSavedFile(dockerSavedFile string, config FileConfig) ([]string, erro
 
 // GetIndexName returns the docker index server from a docker URL.
 func GetIndexName(dockerURL string) string {
-	index, _ := common.SplitReposName(dockerURL)
+	index, _ := internal.SplitReposName(dockerURL)
 	return index
 }
 
 // GetDockercfgAuth reads a ~/.dockercfg file and returns the username and password
 // of the given docker index server.
 func GetDockercfgAuth(indexServer string) (string, string, error) {
-	return common.GetAuthInfo(indexServer)
+	return internal.GetAuthInfo(indexServer)
 }
 
 func convertReal(backend Docker2ACIBackend, dockerURL string, squash bool, outputDir string, tmpDir string, compression common.Compression) ([]string, error) {
@@ -211,7 +212,7 @@ func squashLayers(images []acirenderer.Image, aciRegistry acirenderer.ACIRegistr
 	}
 
 	util.Debug("Validating squashed ACI...")
-	if err := common.ValidateACI(squashedTempFile.Name()); err != nil {
+	if err := internal.ValidateACI(squashedTempFile.Name()); err != nil {
 		return "", fmt.Errorf("error validating image: %v", err)
 	}
 
@@ -264,11 +265,11 @@ func writeSquashedImage(outputFile *os.File, renderedACI acirenderer.RenderedACI
 
 	finalManifest := mergeManifests(manifests)
 
-	if err := common.WriteManifest(outputWriter, finalManifest); err != nil {
+	if err := internal.WriteManifest(outputWriter, finalManifest); err != nil {
 		return err
 	}
 
-	if err := common.WriteRootfsDir(outputWriter); err != nil {
+	if err := internal.WriteRootfsDir(outputWriter); err != nil {
 		return err
 	}
 
