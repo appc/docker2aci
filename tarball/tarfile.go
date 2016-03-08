@@ -13,6 +13,9 @@
 // limitations under the License.
 
 // Package tarball provides functions to manipulate tar files.
+//
+// Note: this package is an implementation detail and shouldn't be used outside
+// of docker2aci.
 package tarball
 
 import (
