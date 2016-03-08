@@ -1,4 +1,4 @@
-// Copyright 2015 CoreOS, Inc.
+// Copyright 2015 The appc Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -29,6 +29,7 @@ import (
 	"github.com/appc/docker2aci/lib/backend/file"
 	"github.com/appc/docker2aci/lib/backend/repository"
 	"github.com/appc/docker2aci/lib/common"
+	"github.com/appc/docker2aci/lib/internal"
 	"github.com/appc/docker2aci/lib/types"
 	"github.com/appc/docker2aci/lib/util"
 	"github.com/appc/docker2aci/tarball"
@@ -37,11 +38,8 @@ import (
 	appctypes "github.com/appc/spec/schema/types"
 )
 
-type Docker2ACIBackend interface {
-	GetImageInfo(dockerUrl string) ([]string, *types.ParsedDockerURL, error)
-	BuildACI(layerNumber int, layerID string, dockerURL *types.ParsedDockerURL, outputDir string, tmpBaseDir string, curPWl []string, compression common.Compression) (string, *schema.ImageManifest, error)
-}
-
+// CommonConfig represents the shared configuration options for converting
+// Docker images.
 type CommonConfig struct {
 	Squash      bool               // squash the layers in one file
 	OutputDir   string             // where to put the resulting ACI
@@ -49,6 +47,8 @@ type CommonConfig struct {
 	Compression common.Compression // which compression to use for the resulting file(s)
 }
 
+// RemoteConfig represents the remote repository specific configuration for
+// converting Docker images.
 type RemoteConfig struct {
 	CommonConfig
 	Username string // username to use if the image to convert needs authentication
@@ -56,6 +56,8 @@ type RemoteConfig struct {
 	Insecure bool   // allow converting from insecure repos
 }
 
+// FileConfig represents the saved file specific configuration for converting
+// Docker images.
 type FileConfig struct {
 	CommonConfig
 	DockerURL string // select an image if there are several images/tags in the file, Syntax: "{docker registry URL}/{image name}:{tag}"
@@ -92,17 +94,17 @@ func ConvertSavedFile(dockerSavedFile string, config FileConfig) ([]string, erro
 
 // GetIndexName returns the docker index server from a docker URL.
 func GetIndexName(dockerURL string) string {
-	index, _ := common.SplitReposName(dockerURL)
+	index, _ := internal.SplitReposName(dockerURL)
 	return index
 }
 
 // GetDockercfgAuth reads a ~/.dockercfg file and returns the username and password
 // of the given docker index server.
 func GetDockercfgAuth(indexServer string) (string, string, error) {
-	return common.GetAuthInfo(indexServer)
+	return internal.GetAuthInfo(indexServer)
 }
 
-func convertReal(backend Docker2ACIBackend, dockerURL string, squash bool, outputDir string, tmpDir string, compression common.Compression) ([]string, error) {
+func convertReal(backend internal.Docker2ACIBackend, dockerURL string, squash bool, outputDir string, tmpDir string, compression common.Compression) ([]string, error) {
 	util.Debug("Getting image info...")
 	ancestry, parsedDockerURL, err := backend.GetImageInfo(dockerURL)
 	if err != nil {
@@ -197,7 +199,7 @@ func squashLayers(images []acirenderer.Image, aciRegistry acirenderer.ACIRegistr
 	}
 
 	util.Debug("Validating squashed ACI...")
-	if err := common.ValidateACI(squashedTempFile.Name()); err != nil {
+	if err := internal.ValidateACI(squashedTempFile.Name()); err != nil {
 		return "", fmt.Errorf("error validating image: %v", err)
 	}
 
@@ -250,11 +252,11 @@ func writeSquashedImage(outputFile *os.File, renderedACI acirenderer.RenderedACI
 
 	finalManifest := mergeManifests(manifests)
 
-	if err := common.WriteManifest(outputWriter, finalManifest); err != nil {
+	if err := internal.WriteManifest(outputWriter, finalManifest); err != nil {
 		return err
 	}
 
-	if err := common.WriteRootfsDir(outputWriter); err != nil {
+	if err := internal.WriteRootfsDir(outputWriter); err != nil {
 		return err
 	}
 

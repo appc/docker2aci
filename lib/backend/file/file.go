@@ -1,3 +1,22 @@
+// Copyright 2015 The appc Authors
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+// Package file is an implementation of Docker2ACIBackend for files saved via
+// "docker save".
+//
+// Note: this package is an implementation detail and shouldn't be used outside
+// of docker2aci.
 package file
 
 import (
@@ -11,6 +30,7 @@ import (
 	"path/filepath"
 
 	"github.com/appc/docker2aci/lib/common"
+	"github.com/appc/docker2aci/lib/internal"
 	"github.com/appc/docker2aci/lib/types"
 	"github.com/appc/docker2aci/lib/util"
 	"github.com/appc/docker2aci/tarball"
@@ -21,15 +41,6 @@ type FileBackend struct {
 	file *os.File
 }
 
-type ErrSeveralImages struct {
-	msg    string
-	Images []string
-}
-
-func (e *ErrSeveralImages) Error() string {
-	return e.msg
-}
-
 func NewFileBackend(file *os.File) *FileBackend {
 	return &FileBackend{
 		file: file,
@@ -37,7 +48,7 @@ func NewFileBackend(file *os.File) *FileBackend {
 }
 
 func (lb *FileBackend) GetImageInfo(dockerURL string) ([]string, *types.ParsedDockerURL, error) {
-	parsedDockerURL, err := common.ParseDockerURL(dockerURL)
+	parsedDockerURL, err := internal.ParseDockerURL(dockerURL)
 	if err != nil {
 		// a missing Docker URL could mean that the file only contains one
 		// image, so we ignore the error here, we'll handle it in getImageID
@@ -83,7 +94,7 @@ func (lb *FileBackend) BuildACI(layerNumber int, layerID string, dockerURL *type
 	defer layerFile.Close()
 
 	util.Debug("Generating layer ACI...")
-	aciPath, manifest, err := common.GenerateACI(layerNumber, layerData, dockerURL, outputDir, layerFile, curPwl, compression)
+	aciPath, manifest, err := internal.GenerateACI(layerNumber, layerData, dockerURL, outputDir, layerFile, curPwl, compression)
 	if err != nil {
 		return "", nil, fmt.Errorf("error generating ACI: %v", err)
 	}
@@ -126,8 +137,8 @@ func getImageID(file *os.File, dockerURL *types.ParsedDockerURL) (string, *types
 					for key, _ := range repositories {
 						appNames = append(appNames, key)
 					}
-					return &ErrSeveralImages{
-						msg:    "several images found",
+					return &common.ErrSeveralImages{
+						Msg:    "several images found",
 						Images: appNames,
 					}
 				default:

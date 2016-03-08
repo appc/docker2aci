@@ -1,4 +1,4 @@
-// Copyright 2015 CoreOS, Inc.
+// Copyright 2015 The appc Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -11,6 +11,7 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+
 package repository
 
 import (
@@ -26,6 +27,7 @@ import (
 	"time"
 
 	"github.com/appc/docker2aci/lib/common"
+	"github.com/appc/docker2aci/lib/internal"
 	"github.com/appc/docker2aci/lib/types"
 	"github.com/appc/docker2aci/lib/util"
 	"github.com/appc/spec/schema"
@@ -84,7 +86,7 @@ func (rb *RepositoryBackend) buildACIV1(layerNumber int, layerID string, dockerU
 	defer layerFile.Close()
 
 	util.Debug("Generating layer ACI...")
-	aciPath, manifest, err := common.GenerateACI(layerNumber, layerData, dockerURL, outputDir, layerFile, curPwl, compression)
+	aciPath, manifest, err := internal.GenerateACI(layerNumber, layerData, dockerURL, outputDir, layerFile, curPwl, compression)
 	if err != nil {
 		return "", nil, fmt.Errorf("error generating ACI: %v", err)
 	}
