@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Packege tarball provides functions to manipulate tar files.
+// Package tarball provides functions to manipulate tar files.
 package tarball
 
 import (
