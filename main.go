@@ -22,7 +22,6 @@ import (
 	"strings"
 
 	"github.com/appc/docker2aci/lib"
-	"github.com/appc/docker2aci/lib/backend/file"
 	"github.com/appc/docker2aci/lib/common"
 	"github.com/appc/docker2aci/lib/util"
 
@@ -110,7 +109,7 @@ func runDocker2ACI(arg string) error {
 			DockerURL:    flagImage,
 		}
 		aciLayerPaths, err = docker2aci.ConvertSavedFile(arg, fileConfig)
-		if serr, ok := err.(*file.ErrSeveralImages); ok {
+		if serr, ok := err.(*common.ErrSeveralImages); ok {
 			err = fmt.Errorf("%s, use option --image with one of:\n\n%s", serr, strings.Join(serr.Images, "\n"))
 		}
 	}

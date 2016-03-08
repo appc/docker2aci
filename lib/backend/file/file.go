@@ -37,15 +37,6 @@ type FileBackend struct {
 	file *os.File
 }
 
-type ErrSeveralImages struct {
-	msg    string
-	Images []string
-}
-
-func (e *ErrSeveralImages) Error() string {
-	return e.msg
-}
-
 func NewFileBackend(file *os.File) *FileBackend {
 	return &FileBackend{
 		file: file,
@@ -142,8 +133,8 @@ func getImageID(file *os.File, dockerURL *types.ParsedDockerURL) (string, *types
 					for key, _ := range repositories {
 						appNames = append(appNames, key)
 					}
-					return &ErrSeveralImages{
-						msg:    "several images found",
+					return &common.ErrSeveralImages{
+						Msg:    "several images found",
 						Images: appNames,
 					}
 				default:

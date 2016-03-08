@@ -59,6 +59,15 @@ const (
 	GzipCompression
 )
 
+type ErrSeveralImages struct {
+	Msg    string
+	Images []string
+}
+
+func (e *ErrSeveralImages) Error() string {
+	return e.Msg
+}
+
 // ParseDockerURL takes a Docker URL and returns a ParsedDockerURL with its
 // index URL, image name, and tag.
 func ParseDockerURL(arg string) (*types.ParsedDockerURL, error) {
