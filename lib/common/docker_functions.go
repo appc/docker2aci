@@ -129,7 +129,7 @@ func anchored(res ...*regexp.Regexp) *regexp.Regexp {
 	return match(`^` + expression(res...).String() + `$`)
 }
 
-// SplitReposName breaks a reposName into an index name and remote name
+// SplitReposName breaks a reposName into an index name and remote name.
 func SplitReposName(reposName string) (string, string) {
 	nameParts := strings.SplitN(reposName, "/", 2)
 	var indexName, remoteName string

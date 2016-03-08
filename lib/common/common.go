@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Package common provides functions shared by different parts of docker2aci.
 package common
 
 import (
@@ -58,6 +59,8 @@ const (
 	GzipCompression
 )
 
+// ParseDockerURL takes a Docker URL and returns a ParsedDockerURL with its
+// index URL, image name, and tag.
 func ParseDockerURL(arg string) (*types.ParsedDockerURL, error) {
 	if arg == "" {
 		return nil, errors.New("empty Docker image reference")
@@ -88,6 +91,7 @@ func ParseDockerURL(arg string) (*types.ParsedDockerURL, error) {
 	}, nil
 }
 
+// GenerateACI takes a Docker layer and generates an ACI from it.
 func GenerateACI(layerNumber int, layerData types.DockerImageData, dockerURL *types.ParsedDockerURL, outputDir string, layerFile *os.File, curPwl []string, compression Compression) (string, *schema.ImageManifest, error) {
 	manifest, err := GenerateManifest(layerData, dockerURL)
 	if err != nil {
@@ -121,6 +125,7 @@ func GenerateACI(layerNumber int, layerData types.DockerImageData, dockerURL *ty
 	return aciPath, manifest, nil
 }
 
+// ValidateACI checks whether the ACI in aciPath is valid.
 func ValidateACI(aciPath string) error {
 	aciFile, err := os.Open(aciPath)
 	if err != nil {
@@ -141,6 +146,8 @@ func ValidateACI(aciPath string) error {
 	return nil
 }
 
+// GenerateManifest converts the docker manifest format to an appc
+// ImageManifest.
 func GenerateManifest(layerData types.DockerImageData, dockerURL *types.ParsedDockerURL) (*schema.ImageManifest, error) {
 	dockerConfig := layerData.Config
 	genManifest := &schema.ImageManifest{}
@@ -521,6 +528,7 @@ func subtractWhiteouts(pathWhitelist []string, whiteouts []string) []string {
 	return pathWhitelist
 }
 
+// WriteManifest writes a schema.ImageManifest entry on a tar.Writer.
 func WriteManifest(outputWriter *tar.Writer, manifest schema.ImageManifest) error {
 	b, err := json.Marshal(manifest)
 	if err != nil {
@@ -543,6 +551,7 @@ func WriteManifest(outputWriter *tar.Writer, manifest schema.ImageManifest) erro
 	return nil
 }
 
+// WriteRootfsDir writes a "rootfs" dir entry on a tar.Writer.
 func WriteRootfsDir(tarWriter *tar.Writer) error {
 	hdr := getGenericTarHeader()
 	hdr.Name = "rootfs"

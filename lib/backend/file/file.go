@@ -12,6 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Package file is an implementation of Docker2ACIBackend for files saved via
+// "docker save".
 package file
 
 import (

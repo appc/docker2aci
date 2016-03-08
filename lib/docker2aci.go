@@ -37,11 +37,21 @@ import (
 	appctypes "github.com/appc/spec/schema/types"
 )
 
+// Docker2ACIBackend is the interface that abstracts converting Docker layers
+// to ACI from where they're stored (remote or file).
+//
+// GetImageInfo takes a Docker URL and returns a list of layers and the parsed
+// Docker URL.
+//
+// BuildACI takes a Docker layer, converts it to ACI and returns its output
+// path and its converted ImageManifest.
 type Docker2ACIBackend interface {
 	GetImageInfo(dockerUrl string) ([]string, *types.ParsedDockerURL, error)
 	BuildACI(layerNumber int, layerID string, dockerURL *types.ParsedDockerURL, outputDir string, tmpBaseDir string, curPWl []string, compression common.Compression) (string, *schema.ImageManifest, error)
 }
 
+// CommonConfig represents the shared configuration options for converting
+// Docker images.
 type CommonConfig struct {
 	Squash      bool               // squash the layers in one file
 	OutputDir   string             // where to put the resulting ACI
@@ -49,6 +59,8 @@ type CommonConfig struct {
 	Compression common.Compression // which compression to use for the resulting file(s)
 }
 
+// RemoteConfig represents the remote repository specific configuration for
+// converting Docker images.
 type RemoteConfig struct {
 	CommonConfig
 	Username string // username to use if the image to convert needs authentication
@@ -56,6 +68,8 @@ type RemoteConfig struct {
 	Insecure bool   // allow converting from insecure repos
 }
 
+// FileConfig represents the saved file specific configuration for converting
+// Docker images.
 type FileConfig struct {
 	CommonConfig
 	DockerURL string // select an image if there are several images/tags in the file, Syntax: "{docker registry URL}/{image name}:{tag}"

@@ -12,8 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Package types defines Docker image, URL and configuration types.
 package types
 
+// ParsedDockerURL represents a parsed Docker URL.
 type ParsedDockerURL struct {
 	IndexURL  string
 	ImageName string
