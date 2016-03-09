@@ -27,6 +27,8 @@ const (
 	GzipCompression
 )
 
+type ParsedDockerURL types.ParsedDockerURL
+
 const (
 	AppcDockerRegistryURL   = "appc.io/docker/registryurl"
 	AppcDockerRepository    = "appc.io/docker/repository"
@@ -48,6 +50,7 @@ func (e *ErrSeveralImages) Error() string {
 
 // ParseDockerURL takes a Docker URL and returns a ParsedDockerURL with its
 // index URL, image name, and tag.
-func ParseDockerURL(arg string) (*types.ParsedDockerURL, error) {
-	return docker.ParseDockerURL(arg)
+func ParseDockerURL(arg string) (*ParsedDockerURL, error) {
+	p, err := docker.ParseDockerURL(arg)
+	return (*ParsedDockerURL)(p), err
 }
