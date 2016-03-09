@@ -26,8 +26,8 @@ import (
 	"path"
 
 	"github.com/appc/docker2aci/lib/common"
-	"github.com/appc/docker2aci/lib/internal"
-	"github.com/appc/docker2aci/lib/types"
+	"github.com/appc/docker2aci/lib/internal/docker"
+	"github.com/appc/docker2aci/lib/internal/types"
 	"github.com/appc/spec/schema"
 )
 
@@ -61,7 +61,7 @@ func NewRepositoryBackend(username string, password string, insecure bool) *Repo
 }
 
 func (rb *RepositoryBackend) GetImageInfo(url string) ([]string, *types.ParsedDockerURL, error) {
-	dockerURL, err := internal.ParseDockerURL(url)
+	dockerURL, err := docker.ParseDockerURL(url)
 	if err != nil {
 		return nil, nil, err
 	}

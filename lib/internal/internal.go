@@ -22,7 +22,6 @@ import (
 	"archive/tar"
 	"compress/gzip"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -34,26 +33,13 @@ import (
 	"time"
 
 	"github.com/appc/docker2aci/lib/common"
-	"github.com/appc/docker2aci/lib/types"
-	"github.com/appc/docker2aci/lib/util"
-	"github.com/appc/docker2aci/tarball"
+	"github.com/appc/docker2aci/lib/internal/tarball"
+	"github.com/appc/docker2aci/lib/internal/types"
+	"github.com/appc/docker2aci/lib/internal/util"
+	"github.com/appc/docker2aci/pkg/log"
 	"github.com/appc/spec/aci"
 	"github.com/appc/spec/schema"
 	appctypes "github.com/appc/spec/schema/types"
-)
-
-const (
-	defaultTag              = "latest"
-	defaultIndexURL         = "registry-1.docker.io"
-	defaultIndexURLAuth     = "https://index.docker.io/v1/"
-	schemaVersion           = "0.7.0"
-	appcDockerRegistryURL   = "appc.io/docker/registryurl"
-	appcDockerRepository    = "appc.io/docker/repository"
-	appcDockerTag           = "appc.io/docker/tag"
-	appcDockerImageID       = "appc.io/docker/imageid"
-	appcDockerParentImageID = "appc.io/docker/parentimageid"
-	appcDockerEntrypoint    = "appc.io/docker/entrypoint"
-	appcDockerCmd           = "appc.io/docker/cmd"
 )
 
 // Docker2ACIBackend is the interface that abstracts converting Docker layers
@@ -67,38 +53,6 @@ const (
 type Docker2ACIBackend interface {
 	GetImageInfo(dockerUrl string) ([]string, *types.ParsedDockerURL, error)
 	BuildACI(layerNumber int, layerID string, dockerURL *types.ParsedDockerURL, outputDir string, tmpBaseDir string, curPWl []string, compression common.Compression) (string, *schema.ImageManifest, error)
-}
-
-// ParseDockerURL takes a Docker URL and returns a ParsedDockerURL with its
-// index URL, image name, and tag.
-func ParseDockerURL(arg string) (*types.ParsedDockerURL, error) {
-	if arg == "" {
-		return nil, errors.New("empty Docker image reference")
-	}
-
-	if !referenceRegexp.MatchString(arg) {
-		return nil, fmt.Errorf("invalid Docker image reference %q", arg)
-	}
-
-	taglessRemote, tag := parseRepositoryTag(arg)
-	if tag == "" {
-		tag = defaultTag
-	}
-	indexURL, imageName := SplitReposName(taglessRemote)
-
-	// the Docker client considers images referenced only by a name (e.g.
-	// "busybox" or "ubuntu") as valid, and, in that case, it adds the
-	// "library/" prefix because that's how they're stored in the official
-	// registry
-	if indexURL == defaultIndexURL && !strings.Contains(imageName, "/") {
-		imageName = "library/" + imageName
-	}
-
-	return &types.ParsedDockerURL{
-		IndexURL:  indexURL,
-		ImageName: imageName,
-		Tag:       tag,
-	}, nil
 }
 
 // GenerateACI takes a Docker layer and generates an ACI from it.
@@ -172,7 +126,7 @@ func GenerateManifest(layerData types.DockerImageData, dockerURL *types.ParsedDo
 	name := appctypes.MustACIdentifier(appURL)
 	genManifest.Name = *name
 
-	acVersion, err := appctypes.NewSemVer(schemaVersion)
+	acVersion, err := appctypes.NewSemVer(schema.AppContainerVersion.String())
 	if err != nil {
 		panic("invalid appc spec version")
 	}
@@ -220,18 +174,18 @@ func GenerateManifest(layerData types.DockerImageData, dockerURL *types.ParsedDo
 	}
 
 	if dockerURL.IndexURL != "" {
-		annotations = append(annotations, appctypes.Annotation{Name: *appctypes.MustACIdentifier(appcDockerRegistryURL), Value: dockerURL.IndexURL})
+		annotations = append(annotations, appctypes.Annotation{Name: *appctypes.MustACIdentifier(common.AppcDockerRegistryURL), Value: dockerURL.IndexURL})
 	}
-	annotations = append(annotations, appctypes.Annotation{Name: *appctypes.MustACIdentifier(appcDockerRepository), Value: dockerURL.ImageName})
-	annotations = append(annotations, appctypes.Annotation{Name: *appctypes.MustACIdentifier(appcDockerImageID), Value: layerData.ID})
-	annotations = append(annotations, appctypes.Annotation{Name: *appctypes.MustACIdentifier(appcDockerParentImageID), Value: layerData.Parent})
+	annotations = append(annotations, appctypes.Annotation{Name: *appctypes.MustACIdentifier(common.AppcDockerRepository), Value: dockerURL.ImageName})
+	annotations = append(annotations, appctypes.Annotation{Name: *appctypes.MustACIdentifier(common.AppcDockerImageID), Value: layerData.ID})
+	annotations = append(annotations, appctypes.Annotation{Name: *appctypes.MustACIdentifier(common.AppcDockerParentImageID), Value: layerData.Parent})
 
 	if dockerConfig != nil {
 		if len(dockerConfig.Entrypoint) > 0 {
-			annotations = append(annotations, appctypes.Annotation{Name: *appctypes.MustACIdentifier(appcDockerEntrypoint), Value: strings.Join(dockerConfig.Entrypoint, " ")})
+			annotations = append(annotations, appctypes.Annotation{Name: *appctypes.MustACIdentifier(common.AppcDockerEntrypoint), Value: strings.Join(dockerConfig.Entrypoint, " ")})
 		}
 		if len(dockerConfig.Cmd) > 0 {
-			annotations = append(annotations, appctypes.Annotation{Name: *appctypes.MustACIdentifier(appcDockerCmd), Value: strings.Join(dockerConfig.Cmd, " ")})
+			annotations = append(annotations, appctypes.Annotation{Name: *appctypes.MustACIdentifier(common.AppcDockerCmd), Value: strings.Join(dockerConfig.Cmd, " ")})
 		}
 
 		exec := getExecCommand(dockerConfig.Entrypoint, dockerConfig.Cmd)
@@ -277,7 +231,7 @@ func GenerateManifest(layerData types.DockerImageData, dockerURL *types.ParsedDo
 
 		genManifest.Dependencies = append(genManifest.Dependencies, appctypes.Dependency{ImageName: *parentImageName, Labels: parentLabels})
 
-		annotations = append(annotations, appctypes.Annotation{Name: *appctypes.MustACIdentifier(appcDockerTag), Value: dockerURL.Tag})
+		annotations = append(annotations, appctypes.Annotation{Name: *appctypes.MustACIdentifier(common.AppcDockerTag), Value: dockerURL.Tag})
 	}
 
 	genManifest.Labels = labels
@@ -312,7 +266,7 @@ func convertPorts(dockerExposedPorts map[string]struct{}, dockerPortSpecs []stri
 	}
 
 	if dockerExposedPorts == nil && dockerPortSpecs != nil {
-		util.Debug("warning: docker image uses deprecated PortSpecs field")
+		log.Debug("warning: docker image uses deprecated PortSpecs field")
 		for _, ep := range dockerPortSpecs {
 			appcPort, err := parseDockerPort(ep)
 			if err != nil {

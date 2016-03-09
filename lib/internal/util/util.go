@@ -20,14 +20,9 @@ package util
 
 import (
 	"fmt"
-	"io"
-	"os"
-	"strings"
 
 	"github.com/appc/spec/pkg/acirenderer"
 )
-
-var debugEnabled bool
 
 // Quote takes a slice of strings and returns another slice with them quoted.
 func Quote(l []string) []string {
@@ -63,26 +58,4 @@ func IndexOf(list []string, el string) int {
 		}
 	}
 	return -1
-}
-
-func printTo(w io.Writer, i ...interface{}) {
-	s := fmt.Sprint(i...)
-	fmt.Fprintln(w, strings.TrimSuffix(s, "\n"))
-}
-
-// Info prints a message to stderr.
-func Info(i ...interface{}) {
-	printTo(os.Stderr, i...)
-}
-
-// Debug prints a message to stderr if debug is enabled.
-func Debug(i ...interface{}) {
-	if debugEnabled {
-		printTo(os.Stderr, i...)
-	}
-}
-
-// InitDebug enables debug output.
-func InitDebug() {
-	debugEnabled = true
 }

@@ -26,13 +26,15 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/appc/docker2aci/lib/backend/file"
-	"github.com/appc/docker2aci/lib/backend/repository"
 	"github.com/appc/docker2aci/lib/common"
 	"github.com/appc/docker2aci/lib/internal"
-	"github.com/appc/docker2aci/lib/types"
-	"github.com/appc/docker2aci/lib/util"
-	"github.com/appc/docker2aci/tarball"
+	"github.com/appc/docker2aci/lib/internal/backend/file"
+	"github.com/appc/docker2aci/lib/internal/backend/repository"
+	"github.com/appc/docker2aci/lib/internal/docker"
+	"github.com/appc/docker2aci/lib/internal/tarball"
+	"github.com/appc/docker2aci/lib/internal/types"
+	"github.com/appc/docker2aci/lib/internal/util"
+	"github.com/appc/docker2aci/pkg/log"
 	"github.com/appc/spec/pkg/acirenderer"
 	"github.com/appc/spec/schema"
 	appctypes "github.com/appc/spec/schema/types"
@@ -94,18 +96,18 @@ func ConvertSavedFile(dockerSavedFile string, config FileConfig) ([]string, erro
 
 // GetIndexName returns the docker index server from a docker URL.
 func GetIndexName(dockerURL string) string {
-	index, _ := internal.SplitReposName(dockerURL)
+	index, _ := docker.SplitReposName(dockerURL)
 	return index
 }
 
 // GetDockercfgAuth reads a ~/.dockercfg file and returns the username and password
 // of the given docker index server.
 func GetDockercfgAuth(indexServer string) (string, string, error) {
-	return internal.GetAuthInfo(indexServer)
+	return docker.GetAuthInfo(indexServer)
 }
 
 func convertReal(backend internal.Docker2ACIBackend, dockerURL string, squash bool, outputDir string, tmpDir string, compression common.Compression) ([]string, error) {
-	util.Debug("Getting image info...")
+	log.Debug("Getting image info...")
 	ancestry, parsedDockerURL, err := backend.GetImageInfo(dockerURL)
 	if err != nil {
 		return nil, err
@@ -165,8 +167,8 @@ func convertReal(backend internal.Docker2ACIBackend, dockerURL string, squash bo
 // squashLayers receives a list of ACI layer file names ordered from base image
 // to application image and squashes them into one ACI
 func squashLayers(images []acirenderer.Image, aciRegistry acirenderer.ACIRegistry, parsedDockerURL types.ParsedDockerURL, outputDir string, compression common.Compression) (path string, err error) {
-	util.Debug("Squashing layers...")
-	util.Debug("Rendering ACI...")
+	log.Debug("Squashing layers...")
+	log.Debug("Rendering ACI...")
 	renderedACI, err := acirenderer.GetRenderedACIFromList(images, aciRegistry)
 	if err != nil {
 		return "", fmt.Errorf("error rendering squashed image: %v", err)
@@ -193,12 +195,12 @@ func squashLayers(images []acirenderer.Image, aciRegistry acirenderer.ACIRegistr
 		}
 	}()
 
-	util.Debug("Writing squashed ACI...")
+	log.Debug("Writing squashed ACI...")
 	if err := writeSquashedImage(squashedTempFile, renderedACI, aciRegistry, manifests, compression); err != nil {
 		return "", fmt.Errorf("error writing squashed image: %v", err)
 	}
 
-	util.Debug("Validating squashed ACI...")
+	log.Debug("Validating squashed ACI...")
 	if err := internal.ValidateACI(squashedTempFile.Name()); err != nil {
 		return "", fmt.Errorf("error validating image: %v", err)
 	}
@@ -207,7 +209,7 @@ func squashLayers(images []acirenderer.Image, aciRegistry acirenderer.ACIRegistr
 		return "", err
 	}
 
-	util.Debug("ACI squashed!")
+	log.Debug("ACI squashed!")
 	return squashedImagePath, nil
 }
 
