@@ -43,16 +43,9 @@ import (
 )
 
 const (
-	defaultTag              = "latest"
-	defaultIndexURL         = "registry-1.docker.io"
-	defaultIndexURLAuth     = "https://index.docker.io/v1/"
-	appcDockerRegistryURL   = "appc.io/docker/registryurl"
-	appcDockerRepository    = "appc.io/docker/repository"
-	appcDockerTag           = "appc.io/docker/tag"
-	appcDockerImageID       = "appc.io/docker/imageid"
-	appcDockerParentImageID = "appc.io/docker/parentimageid"
-	appcDockerEntrypoint    = "appc.io/docker/entrypoint"
-	appcDockerCmd           = "appc.io/docker/cmd"
+	defaultTag          = "latest"
+	defaultIndexURL     = "registry-1.docker.io"
+	defaultIndexURLAuth = "https://index.docker.io/v1/"
 )
 
 // Docker2ACIBackend is the interface that abstracts converting Docker layers
@@ -219,18 +212,18 @@ func GenerateManifest(layerData types.DockerImageData, dockerURL *types.ParsedDo
 	}
 
 	if dockerURL.IndexURL != "" {
-		annotations = append(annotations, appctypes.Annotation{Name: *appctypes.MustACIdentifier(appcDockerRegistryURL), Value: dockerURL.IndexURL})
+		annotations = append(annotations, appctypes.Annotation{Name: *appctypes.MustACIdentifier(common.AppcDockerRegistryURL), Value: dockerURL.IndexURL})
 	}
-	annotations = append(annotations, appctypes.Annotation{Name: *appctypes.MustACIdentifier(appcDockerRepository), Value: dockerURL.ImageName})
-	annotations = append(annotations, appctypes.Annotation{Name: *appctypes.MustACIdentifier(appcDockerImageID), Value: layerData.ID})
-	annotations = append(annotations, appctypes.Annotation{Name: *appctypes.MustACIdentifier(appcDockerParentImageID), Value: layerData.Parent})
+	annotations = append(annotations, appctypes.Annotation{Name: *appctypes.MustACIdentifier(common.AppcDockerRepository), Value: dockerURL.ImageName})
+	annotations = append(annotations, appctypes.Annotation{Name: *appctypes.MustACIdentifier(common.AppcDockerImageID), Value: layerData.ID})
+	annotations = append(annotations, appctypes.Annotation{Name: *appctypes.MustACIdentifier(common.AppcDockerParentImageID), Value: layerData.Parent})
 
 	if dockerConfig != nil {
 		if len(dockerConfig.Entrypoint) > 0 {
-			annotations = append(annotations, appctypes.Annotation{Name: *appctypes.MustACIdentifier(appcDockerEntrypoint), Value: strings.Join(dockerConfig.Entrypoint, " ")})
+			annotations = append(annotations, appctypes.Annotation{Name: *appctypes.MustACIdentifier(common.AppcDockerEntrypoint), Value: strings.Join(dockerConfig.Entrypoint, " ")})
 		}
 		if len(dockerConfig.Cmd) > 0 {
-			annotations = append(annotations, appctypes.Annotation{Name: *appctypes.MustACIdentifier(appcDockerCmd), Value: strings.Join(dockerConfig.Cmd, " ")})
+			annotations = append(annotations, appctypes.Annotation{Name: *appctypes.MustACIdentifier(common.AppcDockerCmd), Value: strings.Join(dockerConfig.Cmd, " ")})
 		}
 
 		exec := getExecCommand(dockerConfig.Entrypoint, dockerConfig.Cmd)
@@ -276,7 +269,7 @@ func GenerateManifest(layerData types.DockerImageData, dockerURL *types.ParsedDo
 
 		genManifest.Dependencies = append(genManifest.Dependencies, appctypes.Dependency{ImageName: *parentImageName, Labels: parentLabels})
 
-		annotations = append(annotations, appctypes.Annotation{Name: *appctypes.MustACIdentifier(appcDockerTag), Value: dockerURL.Tag})
+		annotations = append(annotations, appctypes.Annotation{Name: *appctypes.MustACIdentifier(common.AppcDockerTag), Value: dockerURL.Tag})
 	}
 
 	genManifest.Labels = labels

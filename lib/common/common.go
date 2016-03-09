@@ -22,6 +22,16 @@ const (
 	GzipCompression
 )
 
+const (
+	AppcDockerRegistryURL   = "appc.io/docker/registryurl"
+	AppcDockerRepository    = "appc.io/docker/repository"
+	AppcDockerTag           = "appc.io/docker/tag"
+	AppcDockerImageID       = "appc.io/docker/imageid"
+	AppcDockerParentImageID = "appc.io/docker/parentimageid"
+	AppcDockerEntrypoint    = "appc.io/docker/entrypoint"
+	AppcDockerCmd           = "appc.io/docker/cmd"
+)
+
 type ErrSeveralImages struct {
 	Msg    string
 	Images []string
