@@ -17,7 +17,5 @@ export GOPATH=${PWD}/gopath:${PWD}/Godeps/_workspace
 
 eval $(go env)
 
-echo "Fetching dependencies..."
-go get -d -v ./...
 echo "Building docker2aci..."
 go build -o $GOBIN/docker2aci -ldflags "${GLDFLAGS}" ${REPO_PATH}/
