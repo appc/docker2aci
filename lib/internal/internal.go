@@ -46,7 +46,6 @@ const (
 	defaultTag              = "latest"
 	defaultIndexURL         = "registry-1.docker.io"
 	defaultIndexURLAuth     = "https://index.docker.io/v1/"
-	schemaVersion           = "0.7.0"
 	appcDockerRegistryURL   = "appc.io/docker/registryurl"
 	appcDockerRepository    = "appc.io/docker/repository"
 	appcDockerTag           = "appc.io/docker/tag"
@@ -172,7 +171,7 @@ func GenerateManifest(layerData types.DockerImageData, dockerURL *types.ParsedDo
 	name := appctypes.MustACIdentifier(appURL)
 	genManifest.Name = *name
 
-	acVersion, err := appctypes.NewSemVer(schemaVersion)
+	acVersion, err := appctypes.NewSemVer(schema.AppContainerVersion.String())
 	if err != nil {
 		panic("invalid appc spec version")
 	}
