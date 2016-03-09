@@ -15,6 +15,11 @@
 // Package common provides misc types and variables.
 package common
 
+import (
+	"github.com/appc/docker2aci/lib/internal/docker"
+	"github.com/appc/docker2aci/lib/internal/types"
+)
+
 type Compression int
 
 const (
@@ -39,4 +44,10 @@ type ErrSeveralImages struct {
 
 func (e *ErrSeveralImages) Error() string {
 	return e.Msg
+}
+
+// ParseDockerURL takes a Docker URL and returns a ParsedDockerURL with its
+// index URL, image name, and tag.
+func ParseDockerURL(arg string) (*types.ParsedDockerURL, error) {
+	return docker.ParseDockerURL(arg)
 }

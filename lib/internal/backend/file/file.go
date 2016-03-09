@@ -31,6 +31,7 @@ import (
 
 	"github.com/appc/docker2aci/lib/common"
 	"github.com/appc/docker2aci/lib/internal"
+	"github.com/appc/docker2aci/lib/internal/docker"
 	"github.com/appc/docker2aci/lib/internal/tarball"
 	"github.com/appc/docker2aci/lib/internal/types"
 	"github.com/appc/docker2aci/pkg/log"
@@ -48,7 +49,7 @@ func NewFileBackend(file *os.File) *FileBackend {
 }
 
 func (lb *FileBackend) GetImageInfo(dockerURL string) ([]string, *types.ParsedDockerURL, error) {
-	parsedDockerURL, err := internal.ParseDockerURL(dockerURL)
+	parsedDockerURL, err := docker.ParseDockerURL(dockerURL)
 	if err != nil {
 		// a missing Docker URL could mean that the file only contains one
 		// image, so we ignore the error here, we'll handle it in getImageID

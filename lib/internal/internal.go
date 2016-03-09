@@ -22,7 +22,6 @@ import (
 	"archive/tar"
 	"compress/gzip"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -43,12 +42,6 @@ import (
 	appctypes "github.com/appc/spec/schema/types"
 )
 
-const (
-	defaultTag          = "latest"
-	defaultIndexURL     = "registry-1.docker.io"
-	defaultIndexURLAuth = "https://index.docker.io/v1/"
-)
-
 // Docker2ACIBackend is the interface that abstracts converting Docker layers
 // to ACI from where they're stored (remote or file).
 //
@@ -60,38 +53,6 @@ const (
 type Docker2ACIBackend interface {
 	GetImageInfo(dockerUrl string) ([]string, *types.ParsedDockerURL, error)
 	BuildACI(layerNumber int, layerID string, dockerURL *types.ParsedDockerURL, outputDir string, tmpBaseDir string, curPWl []string, compression common.Compression) (string, *schema.ImageManifest, error)
-}
-
-// ParseDockerURL takes a Docker URL and returns a ParsedDockerURL with its
-// index URL, image name, and tag.
-func ParseDockerURL(arg string) (*types.ParsedDockerURL, error) {
-	if arg == "" {
-		return nil, errors.New("empty Docker image reference")
-	}
-
-	if !referenceRegexp.MatchString(arg) {
-		return nil, fmt.Errorf("invalid Docker image reference %q", arg)
-	}
-
-	taglessRemote, tag := parseRepositoryTag(arg)
-	if tag == "" {
-		tag = defaultTag
-	}
-	indexURL, imageName := SplitReposName(taglessRemote)
-
-	// the Docker client considers images referenced only by a name (e.g.
-	// "busybox" or "ubuntu") as valid, and, in that case, it adds the
-	// "library/" prefix because that's how they're stored in the official
-	// registry
-	if indexURL == defaultIndexURL && !strings.Contains(imageName, "/") {
-		imageName = "library/" + imageName
-	}
-
-	return &types.ParsedDockerURL{
-		IndexURL:  indexURL,
-		ImageName: imageName,
-		Tag:       tag,
-	}, nil
 }
 
 // GenerateACI takes a Docker layer and generates an ACI from it.

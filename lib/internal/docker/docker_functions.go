@@ -12,11 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package internal
+package docker
 
 import (
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -31,6 +32,9 @@ import (
 const (
 	dockercfgFileName    = "config.json"
 	dockercfgFileNameOld = ".dockercfg"
+	defaultIndexURL      = "registry-1.docker.io"
+	defaultIndexURLAuth  = "https://index.docker.io/v1/"
+	defaultTag           = "latest"
 )
 
 // Image references supported by docker2aci.
@@ -223,4 +227,36 @@ func GetAuthInfo(indexServer string) (string, string, error) {
 		return "", "", fmt.Errorf("%s - %v", dockerCfgPath, err)
 	}
 	return "", "", nil
+}
+
+// ParseDockerURL takes a Docker URL and returns a ParsedDockerURL with its
+// index URL, image name, and tag.
+func ParseDockerURL(arg string) (*types.ParsedDockerURL, error) {
+	if arg == "" {
+		return nil, errors.New("empty Docker image reference")
+	}
+
+	if !referenceRegexp.MatchString(arg) {
+		return nil, fmt.Errorf("invalid Docker image reference %q", arg)
+	}
+
+	taglessRemote, tag := parseRepositoryTag(arg)
+	if tag == "" {
+		tag = defaultTag
+	}
+	indexURL, imageName := SplitReposName(taglessRemote)
+
+	// the Docker client considers images referenced only by a name (e.g.
+	// "busybox" or "ubuntu") as valid, and, in that case, it adds the
+	// "library/" prefix because that's how they're stored in the official
+	// registry
+	if indexURL == defaultIndexURL && !strings.Contains(imageName, "/") {
+		imageName = "library/" + imageName
+	}
+
+	return &types.ParsedDockerURL{
+		IndexURL:  indexURL,
+		ImageName: imageName,
+		Tag:       tag,
+	}, nil
 }

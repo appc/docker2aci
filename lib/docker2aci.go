@@ -30,6 +30,7 @@ import (
 	"github.com/appc/docker2aci/lib/internal"
 	"github.com/appc/docker2aci/lib/internal/backend/file"
 	"github.com/appc/docker2aci/lib/internal/backend/repository"
+	"github.com/appc/docker2aci/lib/internal/docker"
 	"github.com/appc/docker2aci/lib/internal/tarball"
 	"github.com/appc/docker2aci/lib/internal/types"
 	"github.com/appc/docker2aci/lib/internal/util"
@@ -95,14 +96,14 @@ func ConvertSavedFile(dockerSavedFile string, config FileConfig) ([]string, erro
 
 // GetIndexName returns the docker index server from a docker URL.
 func GetIndexName(dockerURL string) string {
-	index, _ := internal.SplitReposName(dockerURL)
+	index, _ := docker.SplitReposName(dockerURL)
 	return index
 }
 
 // GetDockercfgAuth reads a ~/.dockercfg file and returns the username and password
 // of the given docker index server.
 func GetDockercfgAuth(indexServer string) (string, string, error) {
-	return internal.GetAuthInfo(indexServer)
+	return docker.GetAuthInfo(indexServer)
 }
 
 func convertReal(backend internal.Docker2ACIBackend, dockerURL string, squash bool, outputDir string, tmpDir string, compression common.Compression) ([]string, error) {
