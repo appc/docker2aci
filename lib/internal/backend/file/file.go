@@ -31,9 +31,9 @@ import (
 
 	"github.com/appc/docker2aci/lib/common"
 	"github.com/appc/docker2aci/lib/internal"
-	"github.com/appc/docker2aci/lib/types"
-	"github.com/appc/docker2aci/lib/util"
-	"github.com/appc/docker2aci/tarball"
+	"github.com/appc/docker2aci/lib/internal/tarball"
+	"github.com/appc/docker2aci/lib/internal/types"
+	"github.com/appc/docker2aci/pkg/log"
 	"github.com/appc/spec/schema"
 )
 
@@ -93,7 +93,7 @@ func (lb *FileBackend) BuildACI(layerNumber int, layerID string, dockerURL *type
 	}
 	defer layerFile.Close()
 
-	util.Debug("Generating layer ACI...")
+	log.Debug("Generating layer ACI...")
 	aciPath, manifest, err := internal.GenerateACI(layerNumber, layerData, dockerURL, outputDir, layerFile, curPwl, compression)
 	if err != nil {
 		return "", nil, fmt.Errorf("error generating ACI: %v", err)
@@ -231,7 +231,7 @@ func getTarFileBytes(file *os.File, path string) ([]byte, error) {
 }
 
 func extractEmbeddedLayer(file *os.File, layerID string, outputPath string) (*os.File, error) {
-	util.Info("Extracting ", layerID[:12], "\n")
+	log.Info("Extracting ", layerID[:12], "\n")
 
 	_, err := file.Seek(0, 0)
 	if err != nil {

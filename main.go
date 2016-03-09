@@ -23,7 +23,7 @@ import (
 
 	"github.com/appc/docker2aci/lib"
 	"github.com/appc/docker2aci/lib/common"
-	"github.com/appc/docker2aci/lib/util"
+	"github.com/appc/docker2aci/pkg/log"
 
 	"github.com/appc/spec/aci"
 	"github.com/appc/spec/schema"
@@ -54,7 +54,7 @@ func printVersion() {
 
 func runDocker2ACI(arg string) error {
 	if flagDebug {
-		util.InitDebug()
+		log.InitDebug()
 	}
 	squash := !flagNoSquash
 

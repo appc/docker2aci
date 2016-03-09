@@ -27,7 +27,7 @@ import (
 
 	"github.com/appc/docker2aci/lib/common"
 	"github.com/appc/docker2aci/lib/internal"
-	"github.com/appc/docker2aci/lib/types"
+	"github.com/appc/docker2aci/lib/internal/types"
 	"github.com/appc/spec/schema"
 )
 

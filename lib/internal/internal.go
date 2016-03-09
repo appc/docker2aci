@@ -34,9 +34,10 @@ import (
 	"time"
 
 	"github.com/appc/docker2aci/lib/common"
-	"github.com/appc/docker2aci/lib/types"
-	"github.com/appc/docker2aci/lib/util"
-	"github.com/appc/docker2aci/tarball"
+	"github.com/appc/docker2aci/lib/internal/tarball"
+	"github.com/appc/docker2aci/lib/internal/types"
+	"github.com/appc/docker2aci/lib/internal/util"
+	"github.com/appc/docker2aci/pkg/log"
 	"github.com/appc/spec/aci"
 	"github.com/appc/spec/schema"
 	appctypes "github.com/appc/spec/schema/types"
@@ -304,7 +305,7 @@ func convertPorts(dockerExposedPorts map[string]struct{}, dockerPortSpecs []stri
 	}
 
 	if dockerExposedPorts == nil && dockerPortSpecs != nil {
-		util.Debug("warning: docker image uses deprecated PortSpecs field")
+		log.Debug("warning: docker image uses deprecated PortSpecs field")
 		for _, ep := range dockerPortSpecs {
 			appcPort, err := parseDockerPort(ep)
 			if err != nil {

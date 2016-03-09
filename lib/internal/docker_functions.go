@@ -25,7 +25,7 @@ import (
 	"runtime"
 	"strings"
 
-	"github.com/appc/docker2aci/lib/types"
+	"github.com/appc/docker2aci/lib/internal/types"
 )
 
 const (
