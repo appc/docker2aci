@@ -1,3 +1,10 @@
+## v0.9.2
+
+v0.9.2 is a minor release with a bug fix and a cleanup over the previous one.
+
+- Use upstream docker functions to parse docker URLs and parse digest ([#140](https://github.com/appc/docker2aci/pull/140)).
+- Change docker entrypoint/cmd annotations to json ([#142](https://github.com/appc/docker2aci/pull/142)).
+
 ## v0.9.1
 
 v0.9.1 is mainly a bugfix and cleanup release.
