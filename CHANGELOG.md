@@ -1,3 +1,9 @@
+## v0.9.3
+
+v0.9.2 is a minor bug fix release.
+
+- Use the default transport when doing HTTP requests ([#147](https://github.com/appc/docker2aci/pull/147)). We were using an empty transport which didn't pass on the proxy configuration.
+
 ## v0.9.2
 
 v0.9.2 is a minor release with a bug fix and a cleanup over the previous one.
