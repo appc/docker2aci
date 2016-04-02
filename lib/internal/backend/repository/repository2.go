@@ -330,18 +330,17 @@ func (rb *RepositoryBackend) makeRequest(req *http.Request, repo string) (*http.
 		return res, err
 	}
 
-	tokens := strings.Split(hdr, " ")
-	if len(tokens) != 2 || strings.ToLower(tokens[0]) != "bearer" {
+	tokens := strings.Split(hdr, ",")
+	if len(tokens) != 3 ||
+		!strings.HasPrefix(strings.ToLower(tokens[0]), "bearer realm") {
 		return res, err
 	}
 	res.Body.Close()
 
-	tokens = strings.Split(tokens[1], ",")
-
 	var realm, service, scope string
 	for _, token := range tokens {
-		if strings.HasPrefix(token, "realm") {
-			realm = strings.Trim(token[len("realm="):], "\"")
+		if strings.HasPrefix(strings.ToLower(token), "bearer realm") {
+			realm = strings.Trim(token[len("bearer realm="):], "\"")
 		}
 		if strings.HasPrefix(token, "service") {
 			service = strings.Trim(token[len("service="):], "\"")
