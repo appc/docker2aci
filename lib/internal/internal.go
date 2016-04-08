@@ -52,7 +52,7 @@ import (
 // path and its converted ImageManifest.
 type Docker2ACIBackend interface {
 	GetImageInfo(dockerUrl string) ([]string, *types.ParsedDockerURL, error)
-	BuildACI(layerNumber int, layerID string, dockerURL *types.ParsedDockerURL, outputDir string, tmpBaseDir string, curPWl []string, compression common.Compression) (string, *schema.ImageManifest, error)
+	BuildACI(layerIDs []string, dockerURL *types.ParsedDockerURL, outputDir string, tmpBaseDir string, compression common.Compression) ([]string, []*schema.ImageManifest, error)
 }
 
 // GenerateACI takes a Docker layer and generates an ACI from it.
