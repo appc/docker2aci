@@ -5,7 +5,7 @@ set -e
 DOCKER2ACI=../bin/docker2aci
 PREFIX=docker2aci-tests
 TESTDIR=$(dirname $(realpath $0))
-RKTVERSION=v1.1.0
+RKTVERSION=v1.5.1
 
 cd $TESTDIR
 
