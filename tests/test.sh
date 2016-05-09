@@ -41,6 +41,8 @@ for i in $(find . -maxdepth 1 -type d -name 'test-*') ; do
 
 	echo "### Test case ${TESTNAME}: converting to ACI..."
 	sudo docker save -o ${TESTNAME}.docker $PREFIX/${TESTNAME}
+	# Docker now writes files as root, so make them readable
+	sudo chmod o+rx ${TESTNAME}.docker
 	$DOCKER2ACI ${TESTNAME}.docker
 
 	echo "### Test case ${TESTNAME}: test in rkt..."
