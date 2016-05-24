@@ -1,6 +1,10 @@
 {
 	"ImportPath": "github.com/appc/docker2aci",
 	"GoVersion": "go1.6",
+	"GodepVersion": "v62",
+	"Packages": [
+		"./..."
+	],
 	"Deps": [
 		{
 			"ImportPath": "github.com/appc/spec/aci",
@@ -48,6 +52,10 @@
 		{
 			"ImportPath": "github.com/coreos/ioprogress",
 			"Rev": "e7fc03058804de5488baed8df5b89f3924b9ec9a"
+		},
+		{
+			"ImportPath": "github.com/coreos/pkg/progressutil",
+			"Rev": "506a84c2b58fabe81aebf0ff606ac825c3581890"
 		},
 		{
 			"ImportPath": "github.com/docker/distribution/digest",
