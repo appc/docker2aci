@@ -125,7 +125,9 @@ func (rb *RepositoryBackend) buildACIV2(layerIDs []string, dockerURL *types.Pars
 		return nil, nil, err
 	}
 	for _, closer := range closers {
-		closer.Close()
+		if closer != nil {
+			closer.Close()
+		}
 	}
 	for _, errChan := range errChannels {
 		err := <-errChan
