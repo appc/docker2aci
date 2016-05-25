@@ -18,7 +18,6 @@ package docker2aci
 
 import (
 	"archive/tar"
-	"compress/gzip"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -38,6 +37,7 @@ import (
 	"github.com/appc/spec/pkg/acirenderer"
 	"github.com/appc/spec/schema"
 	appctypes "github.com/appc/spec/schema/types"
+	gzip "github.com/klauspost/pgzip"
 )
 
 // CommonConfig represents the shared configuration options for converting

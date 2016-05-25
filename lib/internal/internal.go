@@ -20,7 +20,6 @@ package internal
 
 import (
 	"archive/tar"
-	"compress/gzip"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -40,6 +39,7 @@ import (
 	"github.com/appc/spec/aci"
 	"github.com/appc/spec/schema"
 	appctypes "github.com/appc/spec/schema/types"
+	gzip "github.com/klauspost/pgzip"
 )
 
 // Docker2ACIBackend is the interface that abstracts converting Docker layers
