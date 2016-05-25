@@ -103,6 +103,7 @@ func (rb *RepositoryBackend) buildACIV1(layerIDs []string, dockerURL *types.Pars
 				doneChan <- fmt.Errorf("error getting the remote layer: %v", err)
 				return
 			}
+			doneChan <- nil
 		}()
 	}
 	for _, doneChan := range doneChannels {
