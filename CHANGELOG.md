@@ -1,3 +1,10 @@
+## v0.10.0
+
+This release includes two major performance optimizations: parallel layer pull and parallel ACI compression.
+
+- Pull layers in parallel ([#158](https://github.com/appc/docker2aci/pull/158)).
+- Use a parallel compression library ([#157](https://github.com/appc/docker2aci/pull/157)).
+
 ## v0.9.3
 
 v0.9.3 is a minor bug fix release.
