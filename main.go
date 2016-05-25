@@ -30,19 +30,21 @@ import (
 )
 
 var (
-	flagNoSquash    bool
-	flagImage       string
-	flagDebug       bool
-	flagInsecure    bool
-	flagCompression string
-	flagVersion     bool
+	flagNoSquash           bool
+	flagImage              string
+	flagDebug              bool
+	flagInsecureSkipVerify bool
+	flagInsecureAllowHTTP  bool
+	flagCompression        string
+	flagVersion            bool
 )
 
 func init() {
 	flag.BoolVar(&flagNoSquash, "nosquash", false, "Don't squash layers and output every layer as ACI")
 	flag.StringVar(&flagImage, "image", "", "When converting a local file, it selects a particular image to convert. Format: IMAGE_NAME[:TAG]")
 	flag.BoolVar(&flagDebug, "debug", false, "Enables debug messages")
-	flag.BoolVar(&flagInsecure, "insecure", false, "Uses unencrypted connections when fetching images")
+	flag.BoolVar(&flagInsecureSkipVerify, "insecure-skip-verify", false, "Don't verify certificates when fetching images")
+	flag.BoolVar(&flagInsecureAllowHTTP, "insecure-allow-http", false, "Uses unencrypted connections when fetching images")
 	flag.StringVar(&flagCompression, "compression", "gzip", "Type of compression to use; allowed values: gzip, none")
 	flag.BoolVar(&flagVersion, "version", false, "Print version")
 }
@@ -99,7 +101,10 @@ func runDocker2ACI(arg string) error {
 			CommonConfig: cfg,
 			Username:     username,
 			Password:     password,
-			Insecure:     flagInsecure,
+			Insecure: common.InsecureConfig{
+				SkipVerify: flagInsecureSkipVerify,
+				AllowHTTP:  flagInsecureAllowHTTP,
+			},
 		}
 
 		aciLayerPaths, err = docker2aci.ConvertRemoteRepo(dockerURL, remoteConfig)
