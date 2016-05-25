@@ -4,6 +4,7 @@ This release includes two major performance optimizations: parallel layer pull a
 
 - Pull layers in parallel ([#158](https://github.com/appc/docker2aci/pull/158)).
 - Use a parallel compression library ([#157](https://github.com/appc/docker2aci/pull/157)).
+- Fix auth token parsing to handle services with spaces in their names ([#150](https://github.com/appc/docker2aci/pull/150)).
 
 ## v0.9.3
 
