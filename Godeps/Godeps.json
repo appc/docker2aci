@@ -47,6 +47,11 @@
 			"Rev": "e7fc03058804de5488baed8df5b89f3924b9ec9a"
 		},
 		{
+			"ImportPath": "github.com/coreos/pkg/progressutil",
+			"Comment": "v1",
+			"Rev": "160ae6282d8c48a33d8c150e4e4817fdef8a5cde"
+		},
+		{
 			"ImportPath": "github.com/docker/distribution/digest",
 			"Comment": "v2.3.0",
 			"Rev": "099622876197e3b24d627a72053d1bcc8968076a"
