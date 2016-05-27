@@ -1,3 +1,11 @@
+## v0.11.0
+
+This release splits the `--insecure` flag in two, `--insecure-skip-verify` to skip TLS verification, and `--insecure-allow-http` to allow unencrypted connections when fetching images. It also includes a couple of bugfixes.
+
+- Add missing message to channel on successful layer download ([#161](https://github.com/appc/docker2aci/pull/161)).
+- Fix a panic when a layer being fetched encounters an error ([#162](https://github.com/appc/docker2aci/pull/162)).
+- Split `--insecure` flag in two ([#163](https://github.com/appc/docker2aci/pull/163)).
+
 ## v0.10.0
 
 This release includes two major performance optimizations: parallel layer pull and parallel ACI compression.
