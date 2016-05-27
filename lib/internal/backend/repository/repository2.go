@@ -348,7 +348,7 @@ func (rb *RepositoryBackend) makeRequest(req *http.Request, repo string) (*http.
 		}
 	}
 
-	client := util.GetTLSClient(rb.insecure)
+	client := util.GetTLSClient(rb.insecure.SkipVerify)
 	res, err := client.Do(req)
 	if err != nil {
 		return nil, err

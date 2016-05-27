@@ -53,9 +53,9 @@ type CommonConfig struct {
 // converting Docker images.
 type RemoteConfig struct {
 	CommonConfig
-	Username string // username to use if the image to convert needs authentication
-	Password string // password to use if the image to convert needs authentication
-	Insecure bool   // allow converting from insecure repos
+	Username string                // username to use if the image to convert needs authentication
+	Password string                // password to use if the image to convert needs authentication
+	Insecure common.InsecureConfig // Insecure options
 }
 
 // FileConfig represents the saved file specific configuration for converting

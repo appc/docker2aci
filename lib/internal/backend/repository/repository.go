@@ -42,14 +42,14 @@ type RepositoryBackend struct {
 	repoData          *RepoData
 	username          string
 	password          string
-	insecure          bool
+	insecure          common.InsecureConfig
 	hostsV2Support    map[string]bool
 	hostsV2AuthTokens map[string]map[string]string
 	schema            string
 	imageManifests    map[types.ParsedDockerURL]v2Manifest
 }
 
-func NewRepositoryBackend(username string, password string, insecure bool) *RepositoryBackend {
+func NewRepositoryBackend(username string, password string, insecure common.InsecureConfig) *RepositoryBackend {
 	return &RepositoryBackend{
 		username:          username,
 		password:          password,
@@ -137,7 +137,7 @@ func (rb *RepositoryBackend) supportsRegistry(indexURL string, version registryV
 
 		rb.setBasicAuth(req)
 
-		client := util.GetTLSClient(rb.insecure)
+		client := util.GetTLSClient(rb.insecure.SkipVerify)
 		res, err = client.Do(req)
 		return
 	}
@@ -149,7 +149,7 @@ func (rb *RepositoryBackend) supportsRegistry(indexURL string, version registryV
 		defer res.Body.Close()
 	}
 	if err != nil || !ok {
-		if rb.insecure {
+		if rb.insecure.AllowHTTP {
 			schema = "http"
 			res, err = fetch(schema)
 			if err == nil {

@@ -29,6 +29,7 @@ import (
 	"github.com/appc/docker2aci/lib/common"
 	"github.com/appc/docker2aci/lib/internal"
 	"github.com/appc/docker2aci/lib/internal/types"
+	"github.com/appc/docker2aci/lib/internal/util"
 	"github.com/appc/docker2aci/pkg/log"
 	"github.com/appc/spec/schema"
 	"github.com/coreos/ioprogress"
@@ -133,7 +134,7 @@ func (rb *RepositoryBackend) buildACIV1(layerIDs []string, dockerURL *types.Pars
 }
 
 func (rb *RepositoryBackend) getRepoDataV1(indexURL string, remote string) (*RepoData, error) {
-	client := &http.Client{}
+	client := util.GetTLSClient(rb.insecure.SkipVerify)
 	repositoryURL := rb.schema + path.Join(indexURL, "v1", "repositories", remote, "images")
 
 	req, err := http.NewRequest("GET", repositoryURL, nil)
@@ -183,7 +184,7 @@ func (rb *RepositoryBackend) getRepoDataV1(indexURL string, remote string) (*Rep
 }
 
 func (rb *RepositoryBackend) getImageIDFromTagV1(registry string, appName string, tag string, repoData *RepoData) (string, error) {
-	client := &http.Client{}
+	client := util.GetTLSClient(rb.insecure.SkipVerify)
 	// we get all the tags instead of directly getting the imageID of the
 	// requested one (.../tags/TAG) because even though it's specified in the
 	// Docker API, some registries (e.g. Google Container Registry) don't
@@ -226,7 +227,7 @@ func (rb *RepositoryBackend) getImageIDFromTagV1(registry string, appName string
 }
 
 func (rb *RepositoryBackend) getAncestryV1(imgID, registry string, repoData *RepoData) ([]string, error) {
-	client := &http.Client{}
+	client := util.GetTLSClient(rb.insecure.SkipVerify)
 	req, err := http.NewRequest("GET", rb.schema+path.Join(registry, "images", imgID, "ancestry"), nil)
 	if err != nil {
 		return nil, err
@@ -259,7 +260,7 @@ func (rb *RepositoryBackend) getAncestryV1(imgID, registry string, repoData *Rep
 }
 
 func (rb *RepositoryBackend) getJsonV1(imgID, registry string, repoData *RepoData) ([]byte, int64, error) {
-	client := &http.Client{}
+	client := util.GetTLSClient(rb.insecure.SkipVerify)
 	req, err := http.NewRequest("GET", rb.schema+path.Join(registry, "images", imgID, "json"), nil)
 	if err != nil {
 		return nil, -1, err
@@ -294,7 +295,7 @@ func (rb *RepositoryBackend) getJsonV1(imgID, registry string, repoData *RepoDat
 }
 
 func (rb *RepositoryBackend) getLayerV1(imgID, registry string, repoData *RepoData, imgSize int64, tmpDir string) (*os.File, error) {
-	client := &http.Client{}
+	client := util.GetTLSClient(rb.insecure.SkipVerify)
 	req, err := http.NewRequest("GET", rb.schema+path.Join(registry, "images", imgID, "layer"), nil)
 	if err != nil {
 		return nil, err
