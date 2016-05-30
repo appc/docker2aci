@@ -77,7 +77,7 @@ func (rb *RepositoryBackend) buildACIV2(layerIDs []string, dockerURL *types.Pars
 	}
 	defer os.RemoveAll(tmpParentDir)
 
-	copier := &progressutil.CopyProgressPrinter{}
+	copier := progressutil.NewCopyProgressPrinter()
 
 	var errChannels []chan error
 	closers := make([]io.ReadCloser, len(layerIDs))
@@ -339,7 +339,10 @@ func (rb *RepositoryBackend) getLayerV2(layerID string, dockerURL *types.ParsedD
 		return nil, nil, err
 	}
 
-	copier.AddCopy(in, name, size, layerFile)
+	err = copier.AddCopy(in, name, size, layerFile)
+	if err != nil {
+		return nil, nil, err
+	}
 
 	return layerFile, res.Body, nil
 }
