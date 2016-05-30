@@ -26,6 +26,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/appc/docker2aci/lib/common"
@@ -80,13 +81,17 @@ func (rb *RepositoryBackend) buildACIV2(layerIDs []string, dockerURL *types.Pars
 
 	var errChannels []chan error
 	closers := make([]io.ReadCloser, len(layerIDs))
+	var wg sync.WaitGroup
 	for i, layerID := range layerIDs {
-		errChan := make(chan error)
+		wg.Add(1)
+		errChan := make(chan error, 1)
 		errChannels = append(errChannels, errChan)
 		// https://github.com/golang/go/wiki/CommonMistakes
 		i := i // golang--
 		layerID := layerID
 		go func() {
+			defer wg.Done()
+
 			manifest := rb.imageManifests[*dockerURL]
 
 			layerIndex, err := getLayerIndex(layerID, manifest)
@@ -120,6 +125,8 @@ func (rb *RepositoryBackend) buildACIV2(layerIDs []string, dockerURL *types.Pars
 			errChan <- nil
 		}()
 	}
+	// Need to wait for all of the readers to be added to the copier (which happens during rb.getLayerV2)
+	wg.Wait()
 	err = copier.PrintAndWait(os.Stderr, 500*time.Millisecond, nil)
 	if err != nil {
 		return nil, nil, err
