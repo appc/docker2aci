@@ -1,3 +1,9 @@
+## v0.11.1
+
+v0.11.1 is a bugfix release.
+
+- Fix parallel pull synchronisation ([#167](https://github.com/appc/docker2aci/pull/167), [#168](https://github.com/appc/docker2aci/pull/168)).
+
 ## v0.11.0
 
 This release splits the `--insecure` flag in two, `--insecure-skip-verify` to skip TLS verification, and `--insecure-allow-http` to allow unencrypted connections when fetching images. It also includes a couple of bugfixes.
