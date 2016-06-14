@@ -168,7 +168,13 @@ func (rb *RepositoryBackend) buildACIV2(layerIDs []string, dockerURL *types.Pars
 }
 
 func (rb *RepositoryBackend) getManifestV2(dockerURL *types.ParsedDockerURL) (*v2Manifest, []string, error) {
-	url := rb.schema + path.Join(dockerURL.IndexURL, "v2", dockerURL.ImageName, "manifests", dockerURL.Tag)
+	var reference string
+	if dockerURL.Digest != "" {
+		reference = dockerURL.Digest
+	} else {
+		reference = dockerURL.Tag
+	}
+	url := rb.schema + path.Join(dockerURL.IndexURL, "v2", dockerURL.ImageName, "manifests", reference)
 
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
