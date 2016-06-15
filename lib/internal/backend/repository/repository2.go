@@ -24,7 +24,6 @@ import (
 	"os"
 	"path"
 	"regexp"
-	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -36,6 +35,7 @@ import (
 	"github.com/appc/docker2aci/pkg/log"
 	"github.com/appc/spec/schema"
 	"github.com/coreos/pkg/progressutil"
+	"github.com/projectatomic/skopeo/docker"
 )
 
 const (
@@ -294,49 +294,17 @@ func getLayerIndex(layerID string, manifest v2Manifest) (int, error) {
 }
 
 func (rb *RepositoryBackend) getLayerV2(layerID string, dockerURL *types.ParsedDockerURL, tmpDir string, copier *progressutil.CopyProgressPrinter) (*os.File, io.ReadCloser, error) {
-	url := rb.schema + path.Join(dockerURL.IndexURL, "v2", dockerURL.ImageName, "blobs", layerID)
-	req, err := http.NewRequest("GET", url, nil)
+	dockerImgSource, err := docker.NewDockerImageSource(dockerURL.IndexURL+"/"+dockerURL.ImageName+":"+dockerURL.Tag, "", false)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	rb.setBasicAuth(req)
-
-	res, err := rb.makeRequest(req, dockerURL.ImageName)
+	in, size, err := dockerImgSource.GetBlob(layerID)
 	if err != nil {
 		return nil, nil, err
 	}
-
-	if res.StatusCode == http.StatusTemporaryRedirect || res.StatusCode == http.StatusFound {
-		location := res.Header.Get("Location")
-		if location != "" {
-			req, err = http.NewRequest("GET", location, nil)
-			if err != nil {
-				return nil, nil, err
-			}
-			res, err = rb.makeRequest(req, dockerURL.ImageName)
-			if err != nil {
-				return nil, nil, err
-			}
-			defer res.Body.Close()
-		}
-	}
-
-	if res.StatusCode != http.StatusOK {
-		return nil, nil, fmt.Errorf("HTTP code: %d. URL: %s", res.StatusCode, req.URL)
-	}
-
-	var in io.Reader
-	in = res.Body
-
-	var size int64
-
-	if hdr := res.Header.Get("Content-Length"); hdr != "" {
-		size, err = strconv.ParseInt(hdr, 10, 64)
-		if err != nil {
-			return nil, nil, err
-		}
-	}
+	var r io.Reader
+	r = in
 
 	name := "Downloading " + layerID[:18]
 
@@ -345,12 +313,12 @@ func (rb *RepositoryBackend) getLayerV2(layerID string, dockerURL *types.ParsedD
 		return nil, nil, err
 	}
 
-	err = copier.AddCopy(in, name, size, layerFile)
+	err = copier.AddCopy(r, name, size, layerFile)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	return layerFile, res.Body, nil
+	return layerFile, in, nil
 }
 
 func (rb *RepositoryBackend) makeRequest(req *http.Request, repo string) (*http.Response, error) {
