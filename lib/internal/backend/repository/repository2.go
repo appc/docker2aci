@@ -20,22 +20,19 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"net/http"
 	"os"
-	"path"
 	"regexp"
-	"strconv"
-	"strings"
 	"sync"
 	"time"
 
 	"github.com/appc/docker2aci/lib/common"
 	"github.com/appc/docker2aci/lib/internal"
 	"github.com/appc/docker2aci/lib/internal/types"
-	"github.com/appc/docker2aci/lib/internal/util"
 	"github.com/appc/docker2aci/pkg/log"
 	"github.com/appc/spec/schema"
 	"github.com/coreos/pkg/progressutil"
+	"github.com/projectatomic/skopeo/docker"
+	"github.com/projectatomic/skopeo/docker/utils"
 )
 
 const (
@@ -56,15 +53,13 @@ type v2Manifest struct {
 	Signature []byte `json:"signature"`
 }
 
-func (rb *RepositoryBackend) getImageInfoV2(dockerURL *types.ParsedDockerURL) ([]string, *types.ParsedDockerURL, error) {
-	manifest, layers, err := rb.getManifestV2(dockerURL)
+func (rb *RepositoryBackend) getImageInfoV2(dockerURL *types.ParsedDockerURL) ([]string, error) {
+	manifest, layers, err := rb.getManifestAndLayers(dockerURL)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
-
-	rb.imageManifests[*dockerURL] = *manifest
-
-	return layers, dockerURL, nil
+	rb.imageManifests[*dockerURL] = manifest
+	return layers, nil
 }
 
 func (rb *RepositoryBackend) buildACIV2(layerIDs []string, dockerURL *types.ParsedDockerURL, outputDir string, tmpBaseDir string, compression common.Compression) ([]string, []*schema.ImageManifest, error) {
@@ -86,27 +81,19 @@ func (rb *RepositoryBackend) buildACIV2(layerIDs []string, dockerURL *types.Pars
 		wg.Add(1)
 		errChan := make(chan error, 1)
 		errChannels = append(errChannels, errChan)
-		// https://github.com/golang/go/wiki/CommonMistakes
-		i := i // golang--
 		layerID := layerID
-		go func() {
+		go func(index int) {
 			defer wg.Done()
 
 			manifest := rb.imageManifests[*dockerURL]
-
-			layerIndex, err := getLayerIndex(layerID, manifest)
-			if err != nil {
-				errChan <- err
-				return
-			}
-
+			layerIndex := rb.reverseLayers[layerID]
 			if len(manifest.History) <= layerIndex {
 				errChan <- fmt.Errorf("history not found for layer %s", layerID)
 				return
 			}
 
-			layerDatas[i] = types.DockerImageData{}
-			if err := json.Unmarshal([]byte(manifest.History[layerIndex].V1Compatibility), &layerDatas[i]); err != nil {
+			layerDatas[index] = types.DockerImageData{}
+			if err := json.Unmarshal([]byte(manifest.History[layerIndex].V1Compatibility), &layerDatas[index]); err != nil {
 				errChan <- fmt.Errorf("error unmarshaling layer data: %v", err)
 				return
 			}
@@ -117,13 +104,13 @@ func (rb *RepositoryBackend) buildACIV2(layerIDs []string, dockerURL *types.Pars
 				return
 			}
 
-			layerFiles[i], closers[i], err = rb.getLayerV2(layerID, dockerURL, tmpDir, copier)
+			layerFiles[index], closers[index], err = rb.getLayerV2(layerID, dockerURL, tmpDir, copier)
 			if err != nil {
 				errChan <- fmt.Errorf("error getting the remote layer: %v", err)
 				return
 			}
 			errChan <- nil
-		}()
+		}(i)
 	}
 	// Need to wait for all of the readers to be added to the copier (which happens during rb.getLayerV2)
 	wg.Wait()
@@ -167,33 +154,18 @@ func (rb *RepositoryBackend) buildACIV2(layerIDs []string, dockerURL *types.Pars
 	return aciLayerPaths, aciManifests, nil
 }
 
-func (rb *RepositoryBackend) getManifestV2(dockerURL *types.ParsedDockerURL) (*v2Manifest, []string, error) {
+func (rb *RepositoryBackend) getManifestAndLayers(dockerURL *types.ParsedDockerURL) (*v2Manifest, []string, error) {
 	var reference string
 	if dockerURL.Digest != "" {
 		reference = dockerURL.Digest
 	} else {
 		reference = dockerURL.Tag
 	}
-	url := rb.schema + path.Join(dockerURL.IndexURL, "v2", dockerURL.ImageName, "manifests", reference)
-
-	req, err := http.NewRequest("GET", url, nil)
+	dockerImgSource, err := docker.NewDockerImageSource(dockerURL.IndexURL+"/"+dockerURL.ImageName+":"+reference, "", false)
 	if err != nil {
 		return nil, nil, err
 	}
-
-	rb.setBasicAuth(req)
-
-	res, err := rb.makeRequest(req, dockerURL.ImageName)
-	if err != nil {
-		return nil, nil, err
-	}
-	defer res.Body.Close()
-
-	if res.StatusCode != http.StatusOK {
-		return nil, nil, fmt.Errorf("unexpected http code: %d, URL: %s", res.StatusCode, req.URL)
-	}
-
-	manblob, err := ioutil.ReadAll(res.Body)
+	manblob, _, err := dockerImgSource.GetManifest([]string{utils.DockerV2Schema1MIMEType})
 	if err != nil {
 		return nil, nil, err
 	}
@@ -222,6 +194,7 @@ func (rb *RepositoryBackend) getManifestV2(dockerURL *types.ParsedDockerURL) (*v
 	layers := make([]string, len(manifest.FSLayers))
 
 	for i, layer := range manifest.FSLayers {
+		rb.reverseLayers[layer.BlobSum] = i
 		layers[i] = layer.BlobSum
 	}
 
@@ -284,59 +257,18 @@ func validateV1ID(id string) error {
 	return nil
 }
 
-func getLayerIndex(layerID string, manifest v2Manifest) (int, error) {
-	for i, layer := range manifest.FSLayers {
-		if layer.BlobSum == layerID {
-			return i, nil
-		}
-	}
-	return -1, fmt.Errorf("layer not found in manifest: %s", layerID)
-}
-
 func (rb *RepositoryBackend) getLayerV2(layerID string, dockerURL *types.ParsedDockerURL, tmpDir string, copier *progressutil.CopyProgressPrinter) (*os.File, io.ReadCloser, error) {
-	url := rb.schema + path.Join(dockerURL.IndexURL, "v2", dockerURL.ImageName, "blobs", layerID)
-	req, err := http.NewRequest("GET", url, nil)
+	dockerImgSource, err := docker.NewDockerImageSource(dockerURL.IndexURL+"/"+dockerURL.ImageName, "", false)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	rb.setBasicAuth(req)
-
-	res, err := rb.makeRequest(req, dockerURL.ImageName)
+	in, size, err := dockerImgSource.GetBlob(layerID)
 	if err != nil {
 		return nil, nil, err
 	}
-
-	if res.StatusCode == http.StatusTemporaryRedirect || res.StatusCode == http.StatusFound {
-		location := res.Header.Get("Location")
-		if location != "" {
-			req, err = http.NewRequest("GET", location, nil)
-			if err != nil {
-				return nil, nil, err
-			}
-			res, err = rb.makeRequest(req, dockerURL.ImageName)
-			if err != nil {
-				return nil, nil, err
-			}
-			defer res.Body.Close()
-		}
-	}
-
-	if res.StatusCode != http.StatusOK {
-		return nil, nil, fmt.Errorf("HTTP code: %d. URL: %s", res.StatusCode, req.URL)
-	}
-
-	var in io.Reader
-	in = res.Body
-
-	var size int64
-
-	if hdr := res.Header.Get("Content-Length"); hdr != "" {
-		size, err = strconv.ParseInt(hdr, 10, 64)
-		if err != nil {
-			return nil, nil, err
-		}
-	}
+	var r io.Reader
+	r = in
 
 	name := "Downloading " + layerID[:18]
 
@@ -345,128 +277,10 @@ func (rb *RepositoryBackend) getLayerV2(layerID string, dockerURL *types.ParsedD
 		return nil, nil, err
 	}
 
-	err = copier.AddCopy(in, name, size, layerFile)
+	err = copier.AddCopy(r, name, size, layerFile)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	return layerFile, res.Body, nil
-}
-
-func (rb *RepositoryBackend) makeRequest(req *http.Request, repo string) (*http.Response, error) {
-	setBearerHeader := false
-	hostAuthTokens, ok := rb.hostsV2AuthTokens[req.URL.Host]
-	if ok {
-		authToken, ok := hostAuthTokens[repo]
-		if ok {
-			req.Header.Set("Authorization", "Bearer "+authToken)
-			setBearerHeader = true
-		}
-	}
-
-	client := util.GetTLSClient(rb.insecure.SkipVerify)
-	res, err := client.Do(req)
-	if err != nil {
-		return nil, err
-	}
-
-	if res.StatusCode == http.StatusUnauthorized && setBearerHeader {
-		return res, err
-	}
-
-	hdr := res.Header.Get("www-authenticate")
-	if res.StatusCode != http.StatusUnauthorized || hdr == "" {
-		return res, err
-	}
-
-	tokens := strings.Split(hdr, ",")
-	if len(tokens) != 3 ||
-		!strings.HasPrefix(strings.ToLower(tokens[0]), "bearer realm") {
-		return res, err
-	}
-	res.Body.Close()
-
-	var realm, service, scope string
-	for _, token := range tokens {
-		if strings.HasPrefix(strings.ToLower(token), "bearer realm") {
-			realm = strings.Trim(token[len("bearer realm="):], "\"")
-		}
-		if strings.HasPrefix(token, "service") {
-			service = strings.Trim(token[len("service="):], "\"")
-		}
-		if strings.HasPrefix(token, "scope") {
-			scope = strings.Trim(token[len("scope="):], "\"")
-		}
-	}
-
-	if realm == "" {
-		return nil, fmt.Errorf("missing realm in bearer auth challenge")
-	}
-	if service == "" {
-		return nil, fmt.Errorf("missing service in bearer auth challenge")
-	}
-	// The scope can be empty if we're not getting a token for a specific repo
-	if scope == "" && repo != "" {
-		// If the scope is empty and it shouldn't be, we can infer it based on the repo
-		scope = fmt.Sprintf("repository:%s:pull", repo)
-	}
-
-	authReq, err := http.NewRequest("GET", realm, nil)
-	if err != nil {
-		return nil, err
-	}
-
-	getParams := authReq.URL.Query()
-	getParams.Add("service", service)
-	if scope != "" {
-		getParams.Add("scope", scope)
-	}
-	authReq.URL.RawQuery = getParams.Encode()
-
-	rb.setBasicAuth(authReq)
-
-	res, err = client.Do(authReq)
-	if err != nil {
-		return nil, err
-	}
-	defer res.Body.Close()
-
-	switch res.StatusCode {
-	case http.StatusUnauthorized:
-		return nil, fmt.Errorf("unable to retrieve auth token: 401 unauthorized")
-	case http.StatusOK:
-		break
-	default:
-		return nil, fmt.Errorf("unexpected http code: %d, URL: %s", res.StatusCode, authReq.URL)
-	}
-
-	tokenBlob, err := ioutil.ReadAll(res.Body)
-	if err != nil {
-		return nil, err
-	}
-
-	tokenStruct := struct {
-		Token string `json:"token"`
-	}{}
-
-	err = json.Unmarshal(tokenBlob, &tokenStruct)
-	if err != nil {
-		return nil, err
-	}
-
-	hostAuthTokens, ok = rb.hostsV2AuthTokens[req.URL.Host]
-	if !ok {
-		hostAuthTokens = make(map[string]string)
-		rb.hostsV2AuthTokens[req.URL.Host] = hostAuthTokens
-	}
-
-	hostAuthTokens[repo] = tokenStruct.Token
-
-	return rb.makeRequest(req, repo)
-}
-
-func (rb *RepositoryBackend) setBasicAuth(req *http.Request) {
-	if rb.username != "" && rb.password != "" {
-		req.SetBasicAuth(rb.username, rb.password)
-	}
+	return layerFile, in, nil
 }

@@ -39,24 +39,24 @@ const (
 )
 
 type RepositoryBackend struct {
-	repoData          *RepoData
-	username          string
-	password          string
-	insecure          common.InsecureConfig
-	hostsV2Support    map[string]bool
-	hostsV2AuthTokens map[string]map[string]string
-	schema            string
-	imageManifests    map[types.ParsedDockerURL]v2Manifest
+	repoData       *RepoData
+	username       string
+	password       string
+	insecure       common.InsecureConfig
+	hostsV2Support map[string]bool
+	schema         string
+	imageManifests map[types.ParsedDockerURL]*v2Manifest
+	reverseLayers  map[string]int
 }
 
 func NewRepositoryBackend(username string, password string, insecure common.InsecureConfig) *RepositoryBackend {
 	return &RepositoryBackend{
-		username:          username,
-		password:          password,
-		insecure:          insecure,
-		hostsV2Support:    make(map[string]bool),
-		hostsV2AuthTokens: make(map[string]map[string]string),
-		imageManifests:    make(map[types.ParsedDockerURL]v2Manifest),
+		username:       username,
+		password:       password,
+		insecure:       insecure,
+		hostsV2Support: make(map[string]bool),
+		imageManifests: make(map[types.ParsedDockerURL]*v2Manifest),
+		reverseLayers:  make(map[string]int),
 	}
 }
 
@@ -79,7 +79,11 @@ func (rb *RepositoryBackend) GetImageInfo(url string) ([]string, *types.ParsedDo
 	}
 
 	if supportsV2 {
-		return rb.getImageInfoV2(dockerURL)
+		layers, err := rb.getImageInfoV2(dockerURL)
+		if err != nil {
+			return nil, nil, err
+		}
+		return layers, dockerURL, nil
 	} else {
 		URLSchema, supportsV1, err := rb.supportsRegistry(dockerURL.IndexURL, registryV1)
 		if err != nil {
@@ -115,6 +119,12 @@ func checkRegistryStatus(statusCode int, hdr http.Header, version registryVersio
 	}
 
 	return false, fmt.Errorf("unexpected http code: %d", statusCode)
+}
+
+func (rb *RepositoryBackend) setBasicAuth(req *http.Request) {
+	if rb.username != "" && rb.password != "" {
+		req.SetBasicAuth(rb.username, rb.password)
+	}
 }
 
 func (rb *RepositoryBackend) supportsRegistry(indexURL string, version registryVersion) (schema string, ok bool, err error) {

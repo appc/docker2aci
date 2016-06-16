@@ -1,8 +1,16 @@
 {
 	"ImportPath": "github.com/appc/docker2aci",
 	"GoVersion": "go1.6",
-	"GodepVersion": "v72",
+	"GodepVersion": "v62",
+	"Packages": [
+		"./..."
+	],
 	"Deps": [
+		{
+			"ImportPath": "github.com/Sirupsen/logrus",
+			"Comment": "v0.7.3",
+			"Rev": "55eb11d21d2a31a3cc93838241d04800f52e823d"
+		},
 		{
 			"ImportPath": "github.com/appc/spec/aci",
 			"Comment": "v0.8.2",
@@ -62,6 +70,15 @@
 			"Rev": "099622876197e3b24d627a72053d1bcc8968076a"
 		},
 		{
+			"ImportPath": "github.com/docker/docker/pkg/homedir",
+			"Comment": "v1.4.1-12657-g8eed2ce",
+			"Rev": "8eed2ce09571efd927fdba83e4387b854a3672f7"
+		},
+		{
+			"ImportPath": "github.com/docker/libtrust",
+			"Rev": "fa567046d9b14f6aa788882a950d69651d230b21"
+		},
+		{
 			"ImportPath": "github.com/gogo/protobuf/proto",
 			"Comment": "v0.2",
 			"Rev": "4168943e65a2802828518e95310aeeed6d84c4e5"
@@ -85,6 +102,41 @@
 			"ImportPath": "github.com/klauspost/pgzip",
 			"Comment": "v1.0",
 			"Rev": "95e8170c5d4da28db9c64dfc9ec3138ea4466fd4"
+		},
+		{
+			"ImportPath": "github.com/opencontainers/runc/libcontainer/user",
+			"Comment": "v0.1.1-158-g9dcacfb",
+			"Rev": "9dcacfb835b2572961f162fe1d0b2eb6da5d58a4"
+		},
+		{
+			"ImportPath": "github.com/projectatomic/skopeo/directory",
+			"Comment": "v0.1.13-33-g7769a21",
+			"Rev": "7769a21cef863b79664c17b93f2fd1f5a2e41115"
+		},
+		{
+			"ImportPath": "github.com/projectatomic/skopeo/docker",
+			"Comment": "v0.1.13-33-g7769a21",
+			"Rev": "7769a21cef863b79664c17b93f2fd1f5a2e41115"
+		},
+		{
+			"ImportPath": "github.com/projectatomic/skopeo/docker/utils",
+			"Comment": "v0.1.13-33-g7769a21",
+			"Rev": "7769a21cef863b79664c17b93f2fd1f5a2e41115"
+		},
+		{
+			"ImportPath": "github.com/projectatomic/skopeo/image",
+			"Comment": "v0.1.13-33-g7769a21",
+			"Rev": "7769a21cef863b79664c17b93f2fd1f5a2e41115"
+		},
+		{
+			"ImportPath": "github.com/projectatomic/skopeo/reference",
+			"Comment": "v0.1.13-33-g7769a21",
+			"Rev": "7769a21cef863b79664c17b93f2fd1f5a2e41115"
+		},
+		{
+			"ImportPath": "github.com/projectatomic/skopeo/types",
+			"Comment": "v0.1.13-33-g7769a21",
+			"Rev": "7769a21cef863b79664c17b93f2fd1f5a2e41115"
 		},
 		{
 			"ImportPath": "github.com/spf13/pflag",
