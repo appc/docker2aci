@@ -117,6 +117,12 @@ func checkRegistryStatus(statusCode int, hdr http.Header, version registryVersio
 	return false, fmt.Errorf("unexpected http code: %d", statusCode)
 }
 
+func (rb *RepositoryBackend) setBasicAuth(req *http.Request) {
+	if rb.username != "" && rb.password != "" {
+		req.SetBasicAuth(rb.username, rb.password)
+	}
+}
+
 func (rb *RepositoryBackend) supportsRegistry(indexURL string, version registryVersion) (schema string, ok bool, err error) {
 	var URLPath string
 	switch version {

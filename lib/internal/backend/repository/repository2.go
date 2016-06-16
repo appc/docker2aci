@@ -20,22 +20,19 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"net/http"
 	"os"
-	"path"
 	"regexp"
-	"strings"
 	"sync"
 	"time"
 
 	"github.com/appc/docker2aci/lib/common"
 	"github.com/appc/docker2aci/lib/internal"
 	"github.com/appc/docker2aci/lib/internal/types"
-	"github.com/appc/docker2aci/lib/internal/util"
 	"github.com/appc/docker2aci/pkg/log"
 	"github.com/appc/spec/schema"
 	"github.com/coreos/pkg/progressutil"
 	"github.com/projectatomic/skopeo/docker"
+	"github.com/projectatomic/skopeo/docker/utils"
 )
 
 const (
@@ -174,26 +171,11 @@ func (rb *RepositoryBackend) getManifestV2(dockerURL *types.ParsedDockerURL) (*v
 	} else {
 		reference = dockerURL.Tag
 	}
-	url := rb.schema + path.Join(dockerURL.IndexURL, "v2", dockerURL.ImageName, "manifests", reference)
-
-	req, err := http.NewRequest("GET", url, nil)
+	dockerImgSource, err := docker.NewDockerImageSource(dockerURL.IndexURL+"/"+dockerURL.ImageName+":"+reference, "", false)
 	if err != nil {
 		return nil, nil, err
 	}
-
-	rb.setBasicAuth(req)
-
-	res, err := rb.makeRequest(req, dockerURL.ImageName)
-	if err != nil {
-		return nil, nil, err
-	}
-	defer res.Body.Close()
-
-	if res.StatusCode != http.StatusOK {
-		return nil, nil, fmt.Errorf("unexpected http code: %d, URL: %s", res.StatusCode, req.URL)
-	}
-
-	manblob, err := ioutil.ReadAll(res.Body)
+	manblob, _, err := dockerImgSource.GetManifest([]string{utils.DockerV2Schema1MIMEType})
 	if err != nil {
 		return nil, nil, err
 	}
@@ -319,122 +301,4 @@ func (rb *RepositoryBackend) getLayerV2(layerID string, dockerURL *types.ParsedD
 	}
 
 	return layerFile, in, nil
-}
-
-func (rb *RepositoryBackend) makeRequest(req *http.Request, repo string) (*http.Response, error) {
-	setBearerHeader := false
-	hostAuthTokens, ok := rb.hostsV2AuthTokens[req.URL.Host]
-	if ok {
-		authToken, ok := hostAuthTokens[repo]
-		if ok {
-			req.Header.Set("Authorization", "Bearer "+authToken)
-			setBearerHeader = true
-		}
-	}
-
-	client := util.GetTLSClient(rb.insecure.SkipVerify)
-	res, err := client.Do(req)
-	if err != nil {
-		return nil, err
-	}
-
-	if res.StatusCode == http.StatusUnauthorized && setBearerHeader {
-		return res, err
-	}
-
-	hdr := res.Header.Get("www-authenticate")
-	if res.StatusCode != http.StatusUnauthorized || hdr == "" {
-		return res, err
-	}
-
-	tokens := strings.Split(hdr, ",")
-	if len(tokens) != 3 ||
-		!strings.HasPrefix(strings.ToLower(tokens[0]), "bearer realm") {
-		return res, err
-	}
-	res.Body.Close()
-
-	var realm, service, scope string
-	for _, token := range tokens {
-		if strings.HasPrefix(strings.ToLower(token), "bearer realm") {
-			realm = strings.Trim(token[len("bearer realm="):], "\"")
-		}
-		if strings.HasPrefix(token, "service") {
-			service = strings.Trim(token[len("service="):], "\"")
-		}
-		if strings.HasPrefix(token, "scope") {
-			scope = strings.Trim(token[len("scope="):], "\"")
-		}
-	}
-
-	if realm == "" {
-		return nil, fmt.Errorf("missing realm in bearer auth challenge")
-	}
-	if service == "" {
-		return nil, fmt.Errorf("missing service in bearer auth challenge")
-	}
-	// The scope can be empty if we're not getting a token for a specific repo
-	if scope == "" && repo != "" {
-		// If the scope is empty and it shouldn't be, we can infer it based on the repo
-		scope = fmt.Sprintf("repository:%s:pull", repo)
-	}
-
-	authReq, err := http.NewRequest("GET", realm, nil)
-	if err != nil {
-		return nil, err
-	}
-
-	getParams := authReq.URL.Query()
-	getParams.Add("service", service)
-	if scope != "" {
-		getParams.Add("scope", scope)
-	}
-	authReq.URL.RawQuery = getParams.Encode()
-
-	rb.setBasicAuth(authReq)
-
-	res, err = client.Do(authReq)
-	if err != nil {
-		return nil, err
-	}
-	defer res.Body.Close()
-
-	switch res.StatusCode {
-	case http.StatusUnauthorized:
-		return nil, fmt.Errorf("unable to retrieve auth token: 401 unauthorized")
-	case http.StatusOK:
-		break
-	default:
-		return nil, fmt.Errorf("unexpected http code: %d, URL: %s", res.StatusCode, authReq.URL)
-	}
-
-	tokenBlob, err := ioutil.ReadAll(res.Body)
-	if err != nil {
-		return nil, err
-	}
-
-	tokenStruct := struct {
-		Token string `json:"token"`
-	}{}
-
-	err = json.Unmarshal(tokenBlob, &tokenStruct)
-	if err != nil {
-		return nil, err
-	}
-
-	hostAuthTokens, ok = rb.hostsV2AuthTokens[req.URL.Host]
-	if !ok {
-		hostAuthTokens = make(map[string]string)
-		rb.hostsV2AuthTokens[req.URL.Host] = hostAuthTokens
-	}
-
-	hostAuthTokens[repo] = tokenStruct.Token
-
-	return rb.makeRequest(req, repo)
-}
-
-func (rb *RepositoryBackend) setBasicAuth(req *http.Request) {
-	if rb.username != "" && rb.password != "" {
-		req.SetBasicAuth(rb.username, rb.password)
-	}
 }
