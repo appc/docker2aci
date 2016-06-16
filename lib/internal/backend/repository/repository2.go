@@ -53,15 +53,13 @@ type v2Manifest struct {
 	Signature []byte `json:"signature"`
 }
 
-func (rb *RepositoryBackend) getImageInfoV2(dockerURL *types.ParsedDockerURL) ([]string, *types.ParsedDockerURL, error) {
-	manifest, layers, err := rb.getManifestV2(dockerURL)
+func (rb *RepositoryBackend) getImageInfoV2(dockerURL *types.ParsedDockerURL) ([]string, error) {
+	manifest, layers, err := rb.getManifestAndLayers(dockerURL)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
-
-	rb.imageManifests[*dockerURL] = *manifest
-
-	return layers, dockerURL, nil
+	rb.imageManifests[*dockerURL] = manifest
+	return layers, nil
 }
 
 func (rb *RepositoryBackend) buildACIV2(layerIDs []string, dockerURL *types.ParsedDockerURL, outputDir string, tmpBaseDir string, compression common.Compression) ([]string, []*schema.ImageManifest, error) {
@@ -83,27 +81,19 @@ func (rb *RepositoryBackend) buildACIV2(layerIDs []string, dockerURL *types.Pars
 		wg.Add(1)
 		errChan := make(chan error, 1)
 		errChannels = append(errChannels, errChan)
-		// https://github.com/golang/go/wiki/CommonMistakes
-		i := i // golang--
 		layerID := layerID
-		go func() {
+		go func(index int) {
 			defer wg.Done()
 
 			manifest := rb.imageManifests[*dockerURL]
-
-			layerIndex, err := getLayerIndex(layerID, manifest)
-			if err != nil {
-				errChan <- err
-				return
-			}
-
+			layerIndex := rb.reverseLayers[layerID]
 			if len(manifest.History) <= layerIndex {
 				errChan <- fmt.Errorf("history not found for layer %s", layerID)
 				return
 			}
 
-			layerDatas[i] = types.DockerImageData{}
-			if err := json.Unmarshal([]byte(manifest.History[layerIndex].V1Compatibility), &layerDatas[i]); err != nil {
+			layerDatas[index] = types.DockerImageData{}
+			if err := json.Unmarshal([]byte(manifest.History[layerIndex].V1Compatibility), &layerDatas[index]); err != nil {
 				errChan <- fmt.Errorf("error unmarshaling layer data: %v", err)
 				return
 			}
@@ -114,13 +104,13 @@ func (rb *RepositoryBackend) buildACIV2(layerIDs []string, dockerURL *types.Pars
 				return
 			}
 
-			layerFiles[i], closers[i], err = rb.getLayerV2(layerID, dockerURL, tmpDir, copier)
+			layerFiles[index], closers[index], err = rb.getLayerV2(layerID, dockerURL, tmpDir, copier)
 			if err != nil {
 				errChan <- fmt.Errorf("error getting the remote layer: %v", err)
 				return
 			}
 			errChan <- nil
-		}()
+		}(i)
 	}
 	// Need to wait for all of the readers to be added to the copier (which happens during rb.getLayerV2)
 	wg.Wait()
@@ -164,7 +154,7 @@ func (rb *RepositoryBackend) buildACIV2(layerIDs []string, dockerURL *types.Pars
 	return aciLayerPaths, aciManifests, nil
 }
 
-func (rb *RepositoryBackend) getManifestV2(dockerURL *types.ParsedDockerURL) (*v2Manifest, []string, error) {
+func (rb *RepositoryBackend) getManifestAndLayers(dockerURL *types.ParsedDockerURL) (*v2Manifest, []string, error) {
 	var reference string
 	if dockerURL.Digest != "" {
 		reference = dockerURL.Digest
@@ -204,6 +194,7 @@ func (rb *RepositoryBackend) getManifestV2(dockerURL *types.ParsedDockerURL) (*v
 	layers := make([]string, len(manifest.FSLayers))
 
 	for i, layer := range manifest.FSLayers {
+		rb.reverseLayers[layer.BlobSum] = i
 		layers[i] = layer.BlobSum
 	}
 
@@ -266,17 +257,8 @@ func validateV1ID(id string) error {
 	return nil
 }
 
-func getLayerIndex(layerID string, manifest v2Manifest) (int, error) {
-	for i, layer := range manifest.FSLayers {
-		if layer.BlobSum == layerID {
-			return i, nil
-		}
-	}
-	return -1, fmt.Errorf("layer not found in manifest: %s", layerID)
-}
-
 func (rb *RepositoryBackend) getLayerV2(layerID string, dockerURL *types.ParsedDockerURL, tmpDir string, copier *progressutil.CopyProgressPrinter) (*os.File, io.ReadCloser, error) {
-	dockerImgSource, err := docker.NewDockerImageSource(dockerURL.IndexURL+"/"+dockerURL.ImageName+":"+dockerURL.Tag, "", false)
+	dockerImgSource, err := docker.NewDockerImageSource(dockerURL.IndexURL+"/"+dockerURL.ImageName, "", false)
 	if err != nil {
 		return nil, nil, err
 	}
