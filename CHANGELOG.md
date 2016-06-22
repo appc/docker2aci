@@ -1,3 +1,9 @@
+## v0.11.2
+
+v0.11.2 is a bugfix release.
+
+- backend/repository2: don't ignore when there's an image digest ([#171](https://github.com/appc/docker2aci/pull/171)).
+
 ## v0.11.1
 
 v0.11.1 is a bugfix release.
