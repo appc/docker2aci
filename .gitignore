@@ -1,0 +1,8 @@
+*.swp
+tests/distribution
+*.aci
+bin
+gopath
+tests/rendered-test-*
+tests/rkt-uuid-test-*
+tests/*.docker
