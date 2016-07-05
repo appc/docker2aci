@@ -1,3 +1,10 @@
+## v0.12.0
+
+v0.12.0 introduces support for the Docker v2.2 image format and OCI image format. It also fixes a bug that prevented pulling by digest to work.
+
+- backend/repository2: don't ignore when there's an image digest ([#171](https://github.com/appc/docker2aci/pull/171)).
+- lib/repository2: add support for docker v2.2 and OCI ([#176](https://github.com/appc/docker2aci/pull/176)).
+
 ## v0.11.1
 
 v0.11.1 is a bugfix release.
