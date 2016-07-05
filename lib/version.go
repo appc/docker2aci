@@ -16,5 +16,5 @@ package docker2aci
 
 import "github.com/appc/spec/schema"
 
-var Version = "0.12.0"
+var Version = "0.12.0+git"
 var AppcVersion = schema.AppContainerVersion
