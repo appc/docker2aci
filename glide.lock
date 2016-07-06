@@ -1,8 +1,8 @@
 hash: d088a750a1a81b463b0056b81edd3ce849b9bef0eb44861f67041e13b95bade0
-updated: 2016-06-23T16:09:37.591799701+02:00
+updated: 2016-07-06T16:33:39.979049165+02:00
 imports:
 - name: github.com/appc/spec
-  version: f82c741e743001237821b5e0bb9a8ebd324d3117
+  version: fd5e3d8f5d596c6fbd506e80b5e13ba8a97b704c
   subpackages:
   - aci
   - pkg/acirenderer
@@ -47,7 +47,7 @@ imports:
   subpackages:
   - errorutil
 - name: golang.org/x/crypto
-  version: f3241ce8505855877cc8a9717bd61a0f7c4ea83c
+  version: 0c565bf13221fb55497d7ae2bb95694db1fd1bff
   subpackages:
   - ssh/terminal
 - name: gopkg.in/inf.v0
@@ -58,4 +58,4 @@ imports:
   - pkg/api/resource
   - pkg/conversion
   - third_party/forked/reflect
-testImports: []
+devImports: []
