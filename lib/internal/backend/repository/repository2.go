@@ -102,9 +102,9 @@ func (rb *RepositoryBackend) buildACIV21(layerIDs []string, dockerURL *types.Par
 
 			manifest := rb.imageManifests[*dockerURL]
 
-			layerIndex, err := getLayerIndex(layerID, manifest)
-			if err != nil {
-				errChan <- err
+			layerIndex, ok := rb.reverseLayers[layerID]
+			if !ok {
+				errChan <- fmt.Errorf("layer not found in manifest: %s", layerID)
 				return
 			}
 
@@ -345,6 +345,7 @@ func (rb *RepositoryBackend) getManifestV21(dockerURL *types.ParsedDockerURL, re
 	layers := make([]string, len(manifest.FSLayers))
 
 	for i, layer := range manifest.FSLayers {
+		rb.reverseLayers[layer.BlobSum] = i
 		layers[i] = layer.BlobSum
 	}
 
@@ -471,15 +472,6 @@ func validateV1ID(id string) error {
 		return fmt.Errorf("image ID %q is invalid", id)
 	}
 	return nil
-}
-
-func getLayerIndex(layerID string, manifest v2Manifest) (int, error) {
-	for i, layer := range manifest.FSLayers {
-		if layer.BlobSum == layerID {
-			return i, nil
-		}
-	}
-	return -1, fmt.Errorf("layer not found in manifest: %s", layerID)
 }
 
 func (rb *RepositoryBackend) getLayerV2(layerID string, dockerURL *types.ParsedDockerURL, tmpDir string, copier *progressutil.CopyProgressPrinter) (*os.File, io.ReadCloser, error) {

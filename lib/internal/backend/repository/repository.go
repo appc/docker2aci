@@ -50,6 +50,7 @@ type RepositoryBackend struct {
 	imageManifests    map[types.ParsedDockerURL]v2Manifest
 	imageV2Manifests  map[types.ParsedDockerURL]*typesV2.ImageManifest
 	imageConfigs      map[types.ParsedDockerURL]*typesV2.ImageConfig
+	reverseLayers     map[string]int
 }
 
 func NewRepositoryBackend(username string, password string, insecure common.InsecureConfig) *RepositoryBackend {
@@ -62,6 +63,7 @@ func NewRepositoryBackend(username string, password string, insecure common.Inse
 		imageManifests:    make(map[types.ParsedDockerURL]v2Manifest),
 		imageV2Manifests:  make(map[types.ParsedDockerURL]*typesV2.ImageManifest),
 		imageConfigs:      make(map[types.ParsedDockerURL]*typesV2.ImageConfig),
+		reverseLayers:     make(map[string]int),
 	}
 }
 
