@@ -475,7 +475,11 @@ func validateV1ID(id string) error {
 }
 
 func (rb *RepositoryBackend) getLayerV2(layerID string, dockerURL *types.ParsedDockerURL, tmpDir string, copier *progressutil.CopyProgressPrinter) (*os.File, io.ReadCloser, error) {
-	url := rb.schema + path.Join(dockerURL.IndexURL, "v2", dockerURL.ImageName, "blobs", layerID)
+	var (
+		err error
+		res *http.Response
+		url = rb.schema + path.Join(dockerURL.IndexURL, "v2", dockerURL.ImageName, "blobs", layerID)
+	)
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		return nil, nil, err
@@ -488,10 +492,16 @@ func (rb *RepositoryBackend) getLayerV2(layerID string, dockerURL *types.ParsedD
 		typesV2.MediaTypeOCIRootFS,
 	}
 
-	res, err := rb.makeRequest(req, dockerURL.ImageName, accepting)
+	res, err = rb.makeRequest(req, dockerURL.ImageName, accepting)
 	if err != nil {
 		return nil, nil, err
 	}
+
+	defer func() {
+		if err != nil && res != nil {
+			res.Body.Close()
+		}
+	}()
 
 	if res.StatusCode == http.StatusTemporaryRedirect || res.StatusCode == http.StatusFound {
 		location := res.Header.Get("Location")
@@ -500,11 +510,12 @@ func (rb *RepositoryBackend) getLayerV2(layerID string, dockerURL *types.ParsedD
 			if err != nil {
 				return nil, nil, err
 			}
+			res.Body.Close()
+			res = nil
 			res, err = rb.makeRequest(req, dockerURL.ImageName, accepting)
 			if err != nil {
 				return nil, nil, err
 			}
-			defer res.Body.Close()
 		}
 	}
 
