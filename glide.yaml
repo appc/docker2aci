@@ -1,0 +1,20 @@
+package: github.com/appc/docker2aci
+import:
+- package: github.com/appc/spec
+  version: ~0.8.4
+  subpackages:
+  - aci
+  - pkg/acirenderer
+  - schema
+  - schema/types
+- package: github.com/coreos/ioprogress
+- package: github.com/coreos/pkg
+  version: ~2.0.0
+  subpackages:
+  - progressutil
+- package: github.com/docker/distribution
+  version: ~2.5.0-rc.1
+  subpackages:
+  - reference
+- package: github.com/klauspost/pgzip
+  version: ~1.0.0
