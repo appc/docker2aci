@@ -1,3 +1,11 @@
+## v0.12.1
+
+This release fixes a couple of bugs, adds image fetching tests, and replaces godep with glide for vendoring.
+
+- Replace Godeps with glide ([#174](https://github.com/appc/docker2aci/pull/174)).
+- Avoid O(N) and fix defer reader close ([#180](https://github.com/appc/docker2aci/pull/180)).
+- Add golang tests to lib/test to test image fetching ([#181](https://github.com/appc/docker2aci/pull/181)).
+
 ## v0.12.0
 
 v0.12.0 introduces support for the Docker v2.2 image format and OCI image format. It also fixes a bug that prevented pulling by digest to work.
