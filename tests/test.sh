@@ -2,6 +2,23 @@
 
 set -e
 
+# Gets the parent of the directory that this script is stored in.
+# https://stackoverflow.com/questions/59895/can-a-bash-script-tell-what-directory-its-stored-in
+DIR="$( cd "$( dirname $( dirname "${BASH_SOURCE[0]}" ) )" && pwd )"
+
+ORG_PATH="github.com/appc"
+REPO_PATH="${ORG_PATH}/docker2aci"
+
+if [ ! -h ${DIR}/gopath/src/${REPO_PATH} ]; then
+  mkdir -p ${DIR}/gopath/src/${ORG_PATH}
+  cd ${DIR} && ln -s ../../../.. gopath/src/${REPO_PATH} || exit 255
+fi
+
+export GO15VENDOREXPERIMENT=1
+export GOPATH=${DIR}/gopath
+
+go test -v ${REPO_PATH}/lib/tests
+
 DOCKER2ACI=../bin/docker2aci
 PREFIX=docker2aci-tests
 TESTDIR=$(dirname $(realpath $0))

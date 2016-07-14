@@ -82,7 +82,11 @@ func GenerateACI(layerNumber int, layerData types.DockerImageData, dockerURL *ty
 func GenerateACI22LowerLayer(dockerURL *types.ParsedDockerURL, layerDigest string, outputDir string, layerFile *os.File, curPwl []string, compression common.Compression) (string, *schema.ImageManifest, error) {
 	formattedDigest := strings.Replace(layerDigest, ":", "-", -1)
 	aciName := fmt.Sprintf("%s/%s-%s", dockerURL.IndexURL, dockerURL.ImageName, formattedDigest)
-	manifest, err := GenerateEmptyManifest(aciName)
+	sanitizedAciName, err := appctypes.SanitizeACIdentifier(aciName)
+	if err != nil {
+		return "", nil, err
+	}
+	manifest, err := GenerateEmptyManifest(sanitizedAciName)
 	if err != nil {
 		return "", nil, err
 	}
@@ -101,8 +105,12 @@ func GenerateACI22LowerLayer(dockerURL *types.ParsedDockerURL, layerDigest strin
 }
 
 func GenerateACI22TopLayer(dockerURL *types.ParsedDockerURL, imageConfig *typesV2.ImageConfig, layerDigest string, outputDir string, layerFile *os.File, curPwl []string, compression common.Compression, lowerLayers []*schema.ImageManifest) (string, *schema.ImageManifest, error) {
-	aciName := fmt.Sprintf("%s/%s", dockerURL.IndexURL, dockerURL.ImageName)
-	manifest, err := GenerateManifestV22(aciName, dockerURL, imageConfig, layerDigest, lowerLayers)
+	aciName := fmt.Sprintf("%s/%s-%s", dockerURL.IndexURL, dockerURL.ImageName, layerDigest)
+	sanitizedAciName, err := appctypes.SanitizeACIdentifier(aciName)
+	if err != nil {
+		return "", nil, err
+	}
+	manifest, err := GenerateManifestV22(sanitizedAciName, dockerURL, imageConfig, layerDigest, lowerLayers)
 	if err != nil {
 		return "", nil, err
 	}
