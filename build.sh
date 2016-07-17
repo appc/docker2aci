@@ -8,7 +8,7 @@ DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 ORG_PATH="github.com/appc"
 REPO_PATH="${ORG_PATH}/docker2aci"
 VERSION=$(git describe --dirty)
-GLDFLAGS="-X ${REPO_PATH}/lib.Version=${VERSION}"
+GLDFLAGS="-s -X ${REPO_PATH}/lib.Version=${VERSION}"
 
 if [ ! -h ${DIR}/gopath/src/${REPO_PATH} ]; then
   mkdir -p ${DIR}/gopath/src/${ORG_PATH}
@@ -30,4 +30,5 @@ if [ "${GOOS}" = "freebsd" ]; then
 fi
 
 echo "Building docker2aci..."
-go build -o ${GOBIN}/docker2aci -ldflags "${GLDFLAGS}" ${REPO_PATH}
+CGO_ENABLED=0 go build -o ${GOBIN}/docker2aci -a -tags netgo -ldflags "${GLDFLAGS}" ${REPO_PATH}
+
