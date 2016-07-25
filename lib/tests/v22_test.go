@@ -4,44 +4,113 @@ import (
 	"testing"
 
 	"archive/tar"
+	"fmt"
 	"io/ioutil"
 	"os"
 	"path"
+	"reflect"
 	"strings"
 	"time"
 
 	docker2aci "github.com/appc/docker2aci/lib"
 	d2acommon "github.com/appc/docker2aci/lib/common"
 	"github.com/appc/docker2aci/lib/internal/typesV2"
+	"github.com/appc/spec/aci"
+	"github.com/appc/spec/schema"
+	"github.com/appc/spec/schema/types"
 )
+
+var dockerConfig = typesV2.ImageConfig{
+	Created:      "2016-06-02T21:43:31.291506236Z",
+	Author:       "rkt developer <rkt-dev@googlegroups.com>",
+	Architecture: "amd64",
+	OS:           "linux",
+	Config: &typesV2.ImageConfigConfig{
+		User:       "",
+		Memory:     12345,
+		MemorySwap: 0,
+		CpuShares:  9001,
+		ExposedPorts: map[string]struct{}{
+			"80": struct{}{},
+		},
+		Env: []string{
+			"FOO=1",
+		},
+		Entrypoint: nil,
+		Cmd:        nil,
+		Volumes:    nil,
+		WorkingDir: "/",
+	},
+}
+
+var expectedImageManifest = schema.ImageManifest{
+	ACKind:    types.ACKind("ImageManifest"),
+	ACVersion: schema.AppContainerVersion,
+	Name:      *types.MustACIdentifier("variant"),
+	Labels: []types.Label{
+		types.Label{
+			*types.MustACIdentifier("arch"),
+			"amd64",
+		},
+		types.Label{
+			*types.MustACIdentifier("os"),
+			"linux",
+		},
+		types.Label{
+			*types.MustACIdentifier("version"),
+			"v0.1.0",
+		},
+	},
+	App: &types.App{
+		Exec:  nil,
+		User:  "0",
+		Group: "0",
+		Environment: []types.EnvironmentVariable{
+			{
+				Name:  "FOO",
+				Value: "1",
+			},
+		},
+		WorkingDirectory: "/",
+		Ports: []types.Port{
+			{
+				Name:            "80",
+				Protocol:        "tcp",
+				Port:            80,
+				Count:           1,
+				SocketActivated: false,
+			},
+		},
+	},
+	Annotations: []types.Annotation{
+		{
+			Name:  *types.MustACIdentifier("author"),
+			Value: "rkt developer <rkt-dev@googlegroups.com>",
+		},
+		{
+			Name:  *types.MustACIdentifier("created"),
+			Value: "2016-06-02T21:43:31.291506236Z",
+		},
+		{
+			Name:  *types.MustACIdentifier("appc.io/docker/registryurl"),
+			Value: "variant",
+		},
+		{
+			Name:  *types.MustACIdentifier("appc.io/docker/repository"),
+			Value: "docker2aci/dockerv22test",
+		},
+		{
+			Name:  *types.MustACIdentifier("appc.io/docker/imageid"),
+			Value: "variant",
+		},
+	},
+}
 
 func newDocker22Image(layers []Layer) Docker22Image {
 	return Docker22Image{
 		RepoTags: []string{"testimage:latest"},
 		Layers:   layers,
-		Config: typesV2.ImageConfig{
-			Created:      "2016-06-02T21:43:31.291506236Z",
-			Author:       "rkt developer <rkt-dev@googlegroups.com>",
-			Architecture: "amd64",
-			OS:           "linux",
-			Config: &typesV2.ImageConfigConfig{
-				User:       "",
-				Memory:     12345,
-				MemorySwap: 0,
-				CpuShares:  9001,
-				ExposedPorts: map[string]struct{}{
-					"80": struct{}{},
-				},
-				Env: []string{
-					"FOO=1",
-					"BAR=2",
-				},
-				Entrypoint: nil,
-				Cmd:        nil,
-				Volumes:    nil,
-				WorkingDir: "/",
-			},
-		},
+		Config:   dockerConfig,
 	}
 }
 
@@ -102,10 +171,93 @@ func TestFetchingByTagV22(t *testing.T) {
 	}
 	defer os.RemoveAll(outputDir)
 
-	_, err = fetchImage(localUrl, outputDir, true)
+	acis, err := fetchImage(localUrl, outputDir, true)
 	if err != nil {
 		t.Fatalf("%v", err)
 	}
+
+	converted := acis[0]
+
+	f, err := os.Open(converted)
+	if err != nil {
+		t.Fatalf("%v", err)
+	}
+	defer f.Close()
+
+	manifest, err := aci.ManifestFromImage(f)
+	if err != nil {
+		t.Fatalf("%v", err)
+	}
+
+	if err := manifestEqual(manifest, &expectedImageManifest); err != nil {
+		t.Fatalf("manifest doesn't match expected manifest: %v", err)
+	}
+}
+
+func manifestEqual(manifest, expected *schema.ImageManifest) error {
+	if manifest.ACKind != expected.ACKind {
+		return fmt.Errorf("expected ACKind %q, got %q", expected.ACKind, manifest.ACKind)
+	}
+	if manifest.ACVersion != expected.ACVersion {
+		return fmt.Errorf("expected ACVersion %q, got %q", expected.ACVersion, manifest.ACVersion)
+	}
+	if !reflect.DeepEqual(*manifest.App, *expected.App) {
+		return fmt.Errorf("expected App %q, got %q", *expected.App, *manifest.App)
+	}
+	if err := checkLabel("arch", manifest, expected); err != nil {
+		return err
+	}
+	if err := checkLabel("os", manifest, expected); err != nil {
+		return err
+	}
+	if err := checkLabel("version", manifest, expected); err != nil {
+		return err
+	}
+	got, ok := manifest.GetAnnotation("author")
+	if !ok {
+		return fmt.Errorf(`missing "author" annotation`)
+	}
+	exp, _ := expected.GetAnnotation("author")
+	if got != exp {
+		return fmt.Errorf("expected annotation %q, got %q", exp, got)
+	}
+	if err := checkAnnotation("author", manifest, expected); err != nil {
+		return err
+	}
+	if err := checkAnnotation("created", manifest, expected); err != nil {
+		return err
+	}
+	if err := checkAnnotation("appc.io/docker/repository", manifest, expected); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func checkLabel(name string, manifest, expected *schema.ImageManifest) error {
+	got, ok := manifest.GetLabel(name)
+	if !ok {
+		return fmt.Errorf("missing %q label", name)
+	}
+	exp, _ := expected.GetLabel(name)
+	if got != exp {
+		return fmt.Errorf("expected label %q, got %q", exp, got)
+	}
+
+	return nil
+}
+
+func checkAnnotation(name string, manifest, expected *schema.ImageManifest) error {
+	got, ok := manifest.GetAnnotation(name)
+	if !ok {
+		return fmt.Errorf("missing %q annotation", name)
+	}
+	exp, _ := expected.GetAnnotation(name)
+	if got != exp {
+		return fmt.Errorf("expected annotation %q, got %q", exp, got)
+	}
+
+	return nil
 }
 
 func TestFetchingByDigestV22(t *testing.T) {
