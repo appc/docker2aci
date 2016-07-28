@@ -1,3 +1,10 @@
+## v0.12.2
+
+This is a bugfix release.
+
+- lib/repository2: populate reverseLayers correctly ([#185](https://github.com/appc/docker2aci/pull/185)). It caused converted Image Manifests to have the wrong fields. Add a test to make sure this won't go unnoticed again.
+- tests: remove redundant code and simplify ([#186](https://github.com/appc/docker2aci/pull/186)).
+
 ## v0.12.1
 
 This release fixes a couple of bugs, adds image fetching tests, and replaces godep with glide for vendoring.
