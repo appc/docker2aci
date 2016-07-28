@@ -204,31 +204,15 @@ func manifestEqual(manifest, expected *schema.ImageManifest) error {
 	if !reflect.DeepEqual(*manifest.App, *expected.App) {
 		return fmt.Errorf("expected App %q, got %q", *expected.App, *manifest.App)
 	}
-	if err := checkLabel("arch", manifest, expected); err != nil {
-		return err
+	for _, label := range []string{"arch", "os", "version"} {
+		if err := checkLabel(label, manifest, expected); err != nil {
+			return err
+		}
 	}
-	if err := checkLabel("os", manifest, expected); err != nil {
-		return err
-	}
-	if err := checkLabel("version", manifest, expected); err != nil {
-		return err
-	}
-	got, ok := manifest.GetAnnotation("author")
-	if !ok {
-		return fmt.Errorf(`missing "author" annotation`)
-	}
-	exp, _ := expected.GetAnnotation("author")
-	if got != exp {
-		return fmt.Errorf("expected annotation %q, got %q", exp, got)
-	}
-	if err := checkAnnotation("author", manifest, expected); err != nil {
-		return err
-	}
-	if err := checkAnnotation("created", manifest, expected); err != nil {
-		return err
-	}
-	if err := checkAnnotation("appc.io/docker/repository", manifest, expected); err != nil {
-		return err
+	for _, ann := range []string{"author", "created", "appc.io/docker/repository"} {
+		if err := checkAnnotation(ann, manifest, expected); err != nil {
+			return err
+		}
 	}
 
 	return nil
