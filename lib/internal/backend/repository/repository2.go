@@ -102,7 +102,7 @@ func (rb *RepositoryBackend) buildACIV21(layerIDs []string, dockerURL *types.Par
 
 			manifest := rb.imageManifests[*dockerURL]
 
-			layerIndex, ok := rb.reverseLayers[layerID]
+			layerIndex, ok := rb.layersIndex[layerID]
 			if !ok {
 				errChan <- fmt.Errorf("layer not found in manifest: %s", layerID)
 				return
@@ -345,7 +345,9 @@ func (rb *RepositoryBackend) getManifestV21(dockerURL *types.ParsedDockerURL, re
 	layers := make([]string, len(manifest.FSLayers))
 
 	for i, layer := range manifest.FSLayers {
-		rb.reverseLayers[layer.BlobSum] = len(manifest.FSLayers) - 1 - i
+		if _, ok := rb.layersIndex[layer.BlobSum]; !ok {
+			rb.layersIndex[layer.BlobSum] = i
+		}
 		layers[i] = layer.BlobSum
 	}
 
