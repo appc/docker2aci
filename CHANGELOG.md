@@ -1,3 +1,10 @@
+## v0.12.3
+
+This is another bugfix release.
+
+- lib/repository2: get the correct layer index ([#188](https://github.com/appc/docker2aci/pull/188)). This fixes layer ordering for the Docker API v2.1.
+- lib/repository2: fix manifest v2.2 layer ordering ([#190](https://github.com/appc/docker2aci/pull/190)). This fixes layer ordering for the Docker API v2.2.
+
 ## v0.12.2
 
 This is a bugfix release.
