@@ -14,6 +14,8 @@ disabled by specifying `--compression=none`.
 
 ## Build
 
+Requirements: golang
+
 	git clone git://github.com/appc/docker2aci
 	cd docker2aci
 	./build.sh
