@@ -36,8 +36,14 @@ var dockerConfig = typesV2.ImageConfig{
 		Env: []string{
 			"FOO=1",
 		},
-		Entrypoint: nil,
-		Cmd:        nil,
+		Entrypoint: []string{
+			"/bin/sh",
+			"-c",
+			"echo",
+		},
+		Cmd: []string{
+			"foo",
+		},
 		Volumes:    nil,
 		WorkingDir: "/",
 	},
@@ -62,7 +68,12 @@ var expectedImageManifest = schema.ImageManifest{
 		},
 	},
 	App: &types.App{
-		Exec:  nil,
+		Exec: []string{
+			"/bin/sh",
+			"-c",
+			"echo",
+			"foo",
+		},
 		User:  "0",
 		Group: "0",
 		Environment: []types.EnvironmentVariable{
@@ -102,6 +113,14 @@ var expectedImageManifest = schema.ImageManifest{
 		{
 			Name:  *types.MustACIdentifier("appc.io/docker/imageid"),
 			Value: "variant",
+		},
+		{
+			Name:  *types.MustACIdentifier("appc.io/docker/entrypoint"),
+			Value: "[\"/bin/sh\",\"-c\",\"echo\"]",
+		},
+		{
+			Name:  *types.MustACIdentifier("appc.io/docker/cmd"),
+			Value: "[\"foo\"]",
 		},
 	},
 }
@@ -209,7 +228,13 @@ func manifestEqual(manifest, expected *schema.ImageManifest) error {
 			return err
 		}
 	}
-	for _, ann := range []string{"author", "created", "appc.io/docker/repository"} {
+	for _, ann := range []string{
+		"author",
+		"created",
+		"appc.io/docker/repository",
+		"appc.io/docker/entrypoint",
+		"appc.io/docker/cmd",
+	} {
 		if err := checkAnnotation(ann, manifest, expected); err != nil {
 			return err
 		}
