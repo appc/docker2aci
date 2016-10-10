@@ -23,7 +23,6 @@ import (
 	"net/http"
 	"os"
 	"path"
-	"regexp"
 	"strconv"
 	"strings"
 	"sync"
@@ -42,8 +41,6 @@ import (
 const (
 	defaultIndexURL = "registry-1.docker.io"
 )
-
-var validHex = regexp.MustCompile(`^([a-f0-9]{64})$`)
 
 // A manifest conforming to the docker v2.1 spec
 type v2Manifest struct {
@@ -91,6 +88,9 @@ func (rb *RepositoryBackend) buildACIV21(layerIDs []string, dockerURL *types.Par
 	closers := make([]io.ReadCloser, len(layerIDs))
 	var wg sync.WaitGroup
 	for i, layerID := range layerIDs {
+		if err := common.ValidateLayerId(layerID); err != nil {
+			return nil, nil, err
+		}
 		wg.Add(1)
 		errChan := make(chan error, 1)
 		errChannels = append(errChannels, errChan)
@@ -195,6 +195,9 @@ func (rb *RepositoryBackend) buildACIV22(layerIDs []string, dockerURL *types.Par
 
 	resultChan := make(chan layer, len(layerIDs))
 	for i, layerID := range layerIDs {
+		if err := common.ValidateLayerId(layerID); err != nil {
+			return nil, nil, err
+		}
 		// https://github.com/golang/go/wiki/CommonMistakes
 		i := i // golang--
 		layerID := layerID
@@ -436,7 +439,7 @@ func fixManifestLayers(manifest *v2Manifest) error {
 		}
 
 		imgs[i] = img
-		if err := validateV1ID(img.ID); err != nil {
+		if err := common.ValidateLayerId(img.ID); err != nil {
 			return err
 		}
 	}
@@ -468,13 +471,6 @@ func fixManifestLayers(manifest *v2Manifest) error {
 		}
 	}
 
-	return nil
-}
-
-func validateV1ID(id string) error {
-	if ok := validHex.MatchString(id); !ok {
-		return fmt.Errorf("image ID %q is invalid", id)
-	}
 	return nil
 }
 

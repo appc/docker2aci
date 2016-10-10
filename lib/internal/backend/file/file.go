@@ -73,6 +73,9 @@ func (lb *FileBackend) BuildACI(layerIDs []string, dockerURL *types.ParsedDocker
 	var aciManifests []*schema.ImageManifest
 	var curPwl []string
 	for i := len(layerIDs) - 1; i >= 0; i-- {
+		if err := common.ValidateLayerId(layerIDs[i]); err != nil {
+			return nil, nil, err
+		}
 		tmpDir, err := ioutil.TempDir(tmpBaseDir, "docker2aci-")
 		if err != nil {
 			return nil, nil, fmt.Errorf("error creating dir: %v", err)
