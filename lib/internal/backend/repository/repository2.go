@@ -334,7 +334,7 @@ func (rb *RepositoryBackend) getManifestV21(dockerURL *types.ParsedDockerURL, re
 		return nil, fmt.Errorf("name doesn't match what was requested, expected: %s, downloaded: %s", dockerURL.ImageName, manifest.Name)
 	}
 
-	if manifest.Tag != dockerURL.Tag {
+	if dockerURL.Tag != "" && manifest.Tag != dockerURL.Tag {
 		return nil, fmt.Errorf("tag doesn't match what was requested, expected: %s, downloaded: %s", dockerURL.Tag, manifest.Tag)
 	}
 
