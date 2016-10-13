@@ -654,9 +654,9 @@ func parseDockerUser(dockerUser string) (string, string) {
 
 	// when only the user is given, the docker spec says that the default and
 	// supplementary groups of the user in /etc/passwd should be applied.
-	// Assume root group for now in this case.
+	// To avoid inspecting image content, we set gid to the same value as uid.
 	if len(dockerUserParts) < 2 {
-		return dockerUserParts[0], "0"
+		return dockerUserParts[0], dockerUserParts[0]
 	}
 
 	return dockerUserParts[0], dockerUserParts[1]
