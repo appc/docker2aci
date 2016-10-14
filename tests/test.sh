@@ -45,6 +45,12 @@ RKT=$(which rkt)
 
 DOCKER_STORAGE_BACKEND=$(sudo docker info|grep '^Storage Driver:'|sed 's/Storage Driver: //')
 
+for i in $(find . -maxdepth 1 -type d -name 'fixture-test*') ; do
+	  TESTNAME=$(basename $i)
+	  echo "### Test case ${TESTNAME}..."
+	  $TESTDIR/${TESTNAME}/check.sh "${TESTDIR}" "${TESTNAME}"
+done
+
 for i in $(find . -maxdepth 1 -type d -name 'test-*') ; do
 	TESTNAME=$(basename $i)
 	echo "### Test case ${TESTNAME}: build..."
@@ -81,4 +87,3 @@ for i in $(find . -maxdepth 1 -type d -name 'test-*') ; do
 
 	sudo docker rmi $PREFIX/${TESTNAME}
 done
-

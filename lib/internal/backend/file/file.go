@@ -73,6 +73,9 @@ func (lb *FileBackend) BuildACI(layerIDs []string, dockerURL *types.ParsedDocker
 	var aciManifests []*schema.ImageManifest
 	var curPwl []string
 	for i := len(layerIDs) - 1; i >= 0; i-- {
+		if err := common.ValidateLayerId(layerIDs[i]); err != nil {
+			return nil, nil, err
+		}
 		tmpDir, err := ioutil.TempDir(tmpBaseDir, "docker2aci-")
 		if err != nil {
 			return nil, nil, fmt.Errorf("error creating dir: %v", err)
@@ -279,14 +282,24 @@ func extractEmbeddedLayer(file *os.File, layerID string, outputPath string) (*os
 	return layerFile, nil
 }
 
+// getAncestry computes an image ancestry, returning an ordered list
+// of dependencies starting from the topmost image to the base.
+// It checks for dependency loops via duplicate detection in the image
+// chain and errors out in such cases.
 func getAncestry(file *os.File, imgID string) ([]string, error) {
 	var ancestry []string
+	deps := make(map[string]bool)
 
 	curImgID := imgID
 
 	var err error
 	for curImgID != "" {
+		if deps[curImgID] {
+			return nil, fmt.Errorf("dependency loop detected at image %q", curImgID)
+		}
+		deps[curImgID] = true
 		ancestry = append(ancestry, curImgID)
+		log.Debug(fmt.Sprintf("Getting ancestry for layer %q", curImgID))
 		curImgID, err = getParent(file, curImgID)
 		if err != nil {
 			return nil, err
@@ -328,5 +341,6 @@ func getParent(file *os.File, imgID string) (string, error) {
 		return "", err
 	}
 
+	log.Debug(fmt.Sprintf("Layer %q depends on layer %q", imgID, parent))
 	return parent, nil
 }
