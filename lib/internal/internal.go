@@ -271,6 +271,10 @@ func GenerateManifest(layerData types.DockerImageData, dockerURL *types.ParsedDo
 
 			genManifest.App = app
 		}
+
+		for k, v := range dockerConfig.Labels {
+			addAnno(k, v)
+		}
 	}
 
 	if layerData.Parent != "" {
