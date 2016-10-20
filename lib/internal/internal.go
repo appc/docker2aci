@@ -551,9 +551,11 @@ func convertVolumesToMPs(dockerVolumes map[string]struct{}) ([]appctypes.MountPo
 
 func writeACI(layer io.ReadSeeker, manifest schema.ImageManifest, curPwl []string, output string, compression common.Compression) (*schema.ImageManifest, error) {
 	dir, _ := path.Split(output)
-	err := os.MkdirAll(dir, 0755)
-	if err != nil {
-		return nil, fmt.Errorf("error creating ACI parent dir: %v", err)
+	if dir != "" {
+		err := os.MkdirAll(dir, 0755)
+		if err != nil {
+			return nil, fmt.Errorf("error creating ACI parent dir: %v", err)
+		}
 	}
 	aciFile, err := os.Create(output)
 	if err != nil {

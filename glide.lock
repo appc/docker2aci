@@ -40,6 +40,10 @@ imports:
   version: 19b0b332c9e4516a6370a0456e6182c3b5036720
 - name: github.com/klauspost/pgzip
   version: 95e8170c5d4da28db9c64dfc9ec3138ea4466fd4
+- name: github.com/opencontainers/image-spec
+  version: b472d5f4067ddca5cfbfea148dfaf7b42d43c5f0
+  subpackages:
+  - specs-go
 - name: github.com/spf13/pflag
   version: 94e98a55fb412fcbcfc302555cb990f5e1590627
 - name: go4.org

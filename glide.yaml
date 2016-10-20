@@ -18,3 +18,7 @@ import:
   - reference
 - package: github.com/klauspost/pgzip
   version: ~1.0.0
+- package: github.com/opencontainers/image-spec
+  version: v1.0.0-rc1
+  subpackages:
+  - specs-go
