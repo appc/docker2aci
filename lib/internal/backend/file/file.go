@@ -364,7 +364,7 @@ func getJsonV22(file *os.File, layerID string) ([]byte, error) {
 func getTarFileBytes(file *os.File, path string) ([]byte, error) {
 	_, err := file.Seek(0, 0)
 	if err != nil {
-		fmt.Errorf("error seeking file: %v", err)
+		return nil, fmt.Errorf("error seeking file: %v", err)
 	}
 
 	var fileBytes []byte
@@ -395,7 +395,7 @@ func extractEmbeddedLayer(file *os.File, layerTarPath string, outputPath string)
 	log.Info("Extracting ", layerTarPath, "\n")
 	_, err := file.Seek(0, 0)
 	if err != nil {
-		fmt.Errorf("error seeking file: %v", err)
+		return nil, fmt.Errorf("error seeking file: %v", err)
 	}
 
 	var layerFile *os.File
