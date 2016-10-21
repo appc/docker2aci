@@ -30,4 +30,6 @@ if [ "${GOOS}" = "freebsd" ]; then
 fi
 
 echo "Building docker2aci..."
+go vet ./pkg/...
+go vet ./lib/...
 go build -o ${GOBIN}/docker2aci -ldflags "${GLDFLAGS}" ${REPO_PATH}

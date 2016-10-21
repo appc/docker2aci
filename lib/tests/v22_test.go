@@ -55,16 +55,16 @@ var expectedImageManifest = schema.ImageManifest{
 	Name:      *types.MustACIdentifier("variant"),
 	Labels: []types.Label{
 		types.Label{
-			*types.MustACIdentifier("arch"),
-			"amd64",
+			Name:  *types.MustACIdentifier("arch"),
+			Value: "amd64",
 		},
 		types.Label{
-			*types.MustACIdentifier("os"),
-			"linux",
+			Name:  *types.MustACIdentifier("os"),
+			Value: "linux",
 		},
 		types.Label{
-			*types.MustACIdentifier("version"),
-			"v0.1.0",
+			Name:  *types.MustACIdentifier("version"),
+			Value: "v0.1.0",
 		},
 	},
 	App: &types.App{
@@ -221,7 +221,7 @@ func manifestEqual(manifest, expected *schema.ImageManifest) error {
 		return fmt.Errorf("expected ACVersion %q, got %q", expected.ACVersion, manifest.ACVersion)
 	}
 	if !reflect.DeepEqual(*manifest.App, *expected.App) {
-		return fmt.Errorf("expected App %q, got %q", *expected.App, *manifest.App)
+		return fmt.Errorf("expected App %v, got %v", *expected.App, *manifest.App)
 	}
 	for _, label := range []string{"arch", "os", "version"} {
 		if err := checkLabel(label, manifest, expected); err != nil {

@@ -315,12 +315,12 @@ func GenerateEmptyManifest(name string) (*schema.ImageManifest, error) {
 		Name:      *acid,
 		Labels: appctypes.Labels{
 			appctypes.Label{
-				*appctypes.MustACIdentifier("arch"),
-				runtime.GOARCH,
+				Name:  *appctypes.MustACIdentifier("arch"),
+				Value: runtime.GOARCH,
 			},
 			appctypes.Label{
-				*appctypes.MustACIdentifier("os"),
-				runtime.GOOS,
+				Name:  *appctypes.MustACIdentifier("os"),
+				Value: runtime.GOOS,
 			},
 		},
 	}, nil
