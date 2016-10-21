@@ -17,6 +17,8 @@ fi
 export GO15VENDOREXPERIMENT=1
 export GOPATH=${DIR}/gopath
 
+go vet ./pkg/...
+go vet ./lib/...
 go test -v ${REPO_PATH}/lib/tests
 
 DOCKER2ACI=../bin/docker2aci

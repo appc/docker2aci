@@ -309,20 +309,22 @@ func GenerateEmptyManifest(name string) (*schema.ImageManifest, error) {
 		return nil, err
 	}
 
+	labels := appctypes.Labels{
+		appctypes.Label{
+			Name:  *appctypes.MustACIdentifier("arch"),
+			Value: runtime.GOARCH,
+		},
+		appctypes.Label{
+			Name:  *appctypes.MustACIdentifier("os"),
+			Value: runtime.GOOS,
+		},
+	}
+
 	return &schema.ImageManifest{
 		ACKind:    schema.ImageManifestKind,
 		ACVersion: schema.AppContainerVersion,
 		Name:      *acid,
-		Labels: appctypes.Labels{
-			appctypes.Label{
-				*appctypes.MustACIdentifier("arch"),
-				runtime.GOARCH,
-			},
-			appctypes.Label{
-				*appctypes.MustACIdentifier("os"),
-				runtime.GOOS,
-			},
-		},
+		Labels:    labels,
 	}, nil
 }
 
