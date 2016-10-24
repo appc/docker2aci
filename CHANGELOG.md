@@ -1,3 +1,15 @@
+## v0.13.0
+
+This release adds support for converting local OCI bundles and fixes two security issues (CVE-2016-7569 and CVE-2016-8579). It also includes fixes for several image fetching and conversion bugs.
+
+ - docker2aci: add support for converting OCI tarfiles ([#200](https://github.com/appc/docker2aci/pull/200)).
+ - docker2aci: additional validation on malformed images ([#204](https://github.com/appc/docker2aci/pull/204)). Fixes (CVE-2016-7569 and CVE-2016-8579).
+ - lib: Use the new media types for oci ([#213](https://github.com/appc/docker2aci/pull/213)).
+ - backend/repository: assume no v2 on unexpected status ([#214](https://github.com/appc/docker2aci/pull/214)).
+ - lib/internal: do not compare tag when pulling by digest ([#207](https://github.com/appc/docker2aci/pull/207)).
+ - lib/internal: re-use uid value when gid is missing ([#206](https://github.com/appc/docker2aci/pull/206)).
+ - lib/internal: add entrypoint/cmd annotations to v21 images ([#199](https://github.com/appc/docker2aci/pull/199)).
+
 ## v0.12.3
 
 This is another bugfix release.
