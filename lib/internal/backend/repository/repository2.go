@@ -489,7 +489,7 @@ func (rb *RepositoryBackend) getLayerV2(layerID string, dockerURL *types.ParsedD
 
 	accepting := []string{
 		typesV2.MediaTypeDockerV22RootFS,
-		typesV2.MediaTypeOCIRootFS,
+		typesV2.MediaTypeOCILayer,
 	}
 
 	res, err = rb.makeRequest(req, dockerURL.ImageName, accepting)
