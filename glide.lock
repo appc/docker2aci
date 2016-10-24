@@ -1,18 +1,18 @@
-hash: d088a750a1a81b463b0056b81edd3ce849b9bef0eb44861f67041e13b95bade0
-updated: 2016-07-06T16:33:39.979049165+02:00
+hash: 5f32573a0491c3c15d8e6654967c0a9b6798ed25cb9f1ae617f916be1730fb5c
+updated: 2016-10-21T13:40:38.649778864Z
 imports:
 - name: github.com/appc/spec
-  version: fd5e3d8f5d596c6fbd506e80b5e13ba8a97b704c
+  version: f329150233aa3ac6c83ab5ba02a2b5a8bd03d365
   subpackages:
   - aci
   - pkg/acirenderer
-  - schema
-  - schema/types
-  - pkg/tarheader
-  - schema/common
   - pkg/device
+  - pkg/tarheader
+  - schema
+  - schema/common
+  - schema/types
 - name: github.com/coreos/go-semver
-  version: 6fe83ccda8fb9b7549c9ab4ba47f47858bc950aa
+  version: 294930c1e79c64e7dbe360054274fdad492c8cf5
   subpackages:
   - semver
 - name: github.com/coreos/ioprogress
@@ -24,14 +24,14 @@ imports:
 - name: github.com/docker/distribution
   version: f4296d55fcefdf842a4a2fce41cbf2aef3e03403
   subpackages:
-  - reference
   - digest
+  - reference
 - name: github.com/gogo/protobuf
   version: 4168943e65a2802828518e95310aeeed6d84c4e5
   subpackages:
   - proto
 - name: github.com/klauspost/compress
-  version: 14eb9c4951195779ecfbec34431a976de7335b0a
+  version: 006acde2c5d283d2f8b8aa03d8f0cd2891c680cf
   subpackages:
   - flate
 - name: github.com/klauspost/cpuid
@@ -45,21 +45,21 @@ imports:
   subpackages:
   - specs-go
 - name: github.com/spf13/pflag
-  version: 94e98a55fb412fcbcfc302555cb990f5e1590627
+  version: 08b1a584251b5b62f458943640fc8ebd4d50aaa5
 - name: go4.org
   version: 03efcb870d84809319ea509714dd6d19a1498483
   subpackages:
   - errorutil
 - name: golang.org/x/crypto
-  version: 0c565bf13221fb55497d7ae2bb95694db1fd1bff
+  version: a7ead6ddf06233883deca151dffaef2effbf498f
   subpackages:
   - ssh/terminal
 - name: gopkg.in/inf.v0
   version: 3887ee99ecf07df5b447e9b00d9c0b2adaa9f3e4
 - name: k8s.io/kubernetes
-  version: 9990f843cd62caa90445cf76b07d63ba7b5c86fd
+  version: 283137936a498aed572ee22af6774b6fb6e9fd94
   subpackages:
   - pkg/api/resource
   - pkg/conversion
   - third_party/forked/reflect
-devImports: []
+testImports: []
