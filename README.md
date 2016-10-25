@@ -20,6 +20,18 @@ Requirements: golang
 	cd docker2aci
 	./build.sh
 
+## Build with rkt
+
+assuming that you have rkt installed on you system
+
+```
+        git clone git://github.com/appc/docker2aci
+        cd docker2aci
+        ./build-rkt
+```
+
+the docker2aci is in the bin folder
+
 ## Volumes
 
 Docker Volumes get converted to mountPoints in the [Image Manifest
