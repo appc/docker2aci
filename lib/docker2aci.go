@@ -31,7 +31,6 @@ import (
 	"github.com/appc/docker2aci/lib/internal/backend/repository"
 	"github.com/appc/docker2aci/lib/internal/docker"
 	"github.com/appc/docker2aci/lib/internal/tarball"
-	"github.com/appc/docker2aci/lib/internal/types"
 	"github.com/appc/docker2aci/lib/internal/util"
 	"github.com/appc/docker2aci/pkg/log"
 	"github.com/appc/spec/pkg/acirenderer"
@@ -160,7 +159,7 @@ func convertReal(backend internal.Docker2ACIBackend, dockerURL string, squash bo
 
 // squashLayers receives a list of ACI layer file names ordered from base image
 // to application image and squashes them into one ACI
-func squashLayers(images []acirenderer.Image, aciRegistry acirenderer.ACIRegistry, parsedDockerURL types.ParsedDockerURL, outputDir string, compression common.Compression) (path string, err error) {
+func squashLayers(images []acirenderer.Image, aciRegistry acirenderer.ACIRegistry, parsedDockerURL common.ParsedDockerURL, outputDir string, compression common.Compression) (path string, err error) {
 	log.Debug("Squashing layers...")
 	log.Debug("Rendering ACI...")
 	renderedACI, err := acirenderer.GetRenderedACIFromList(images, aciRegistry)
@@ -207,7 +206,7 @@ func squashLayers(images []acirenderer.Image, aciRegistry acirenderer.ACIRegistr
 	return squashedImagePath, nil
 }
 
-func getSquashedFilename(parsedDockerURL types.ParsedDockerURL) string {
+func getSquashedFilename(parsedDockerURL common.ParsedDockerURL) string {
 	squashedFilename := strings.Replace(parsedDockerURL.ImageName, "/", "-", -1)
 	if parsedDockerURL.Tag != "" {
 		squashedFilename += "-" + parsedDockerURL.Tag

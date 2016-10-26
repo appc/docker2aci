@@ -41,7 +41,7 @@ type RepoData struct {
 	Cookie    []string
 }
 
-func (rb *RepositoryBackend) getImageInfoV1(dockerURL *types.ParsedDockerURL) ([]string, *types.ParsedDockerURL, error) {
+func (rb *RepositoryBackend) getImageInfoV1(dockerURL *common.ParsedDockerURL) ([]string, *common.ParsedDockerURL, error) {
 	repoData, err := rb.getRepoDataV1(dockerURL.IndexURL, dockerURL.ImageName)
 	if err != nil {
 		return nil, nil, fmt.Errorf("error getting repository data: %v", err)
@@ -63,7 +63,7 @@ func (rb *RepositoryBackend) getImageInfoV1(dockerURL *types.ParsedDockerURL) ([
 	return ancestry, dockerURL, nil
 }
 
-func (rb *RepositoryBackend) buildACIV1(layerIDs []string, dockerURL *types.ParsedDockerURL, outputDir string, tmpBaseDir string, compression common.Compression) ([]string, []*schema.ImageManifest, error) {
+func (rb *RepositoryBackend) buildACIV1(layerIDs []string, dockerURL *common.ParsedDockerURL, outputDir string, tmpBaseDir string, compression common.Compression) ([]string, []*schema.ImageManifest, error) {
 	layerFiles := make([]*os.File, len(layerIDs))
 	layerDatas := make([]types.DockerImageData, len(layerIDs))
 

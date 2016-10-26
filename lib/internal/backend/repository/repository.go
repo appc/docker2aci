@@ -25,8 +25,6 @@ import (
 	"net/url"
 
 	"github.com/appc/docker2aci/lib/common"
-	"github.com/appc/docker2aci/lib/internal/docker"
-	"github.com/appc/docker2aci/lib/internal/types"
 	"github.com/appc/docker2aci/lib/internal/typesV2"
 	"github.com/appc/docker2aci/lib/internal/util"
 	"github.com/appc/spec/schema"
@@ -64,9 +62,9 @@ type RepositoryBackend struct {
 	hostsV2Support    map[string]bool
 	hostsV2AuthTokens map[string]map[string]string
 	schema            string
-	imageManifests    map[types.ParsedDockerURL]v2Manifest
-	imageV2Manifests  map[types.ParsedDockerURL]*typesV2.ImageManifest
-	imageConfigs      map[types.ParsedDockerURL]*typesV2.ImageConfig
+	imageManifests    map[common.ParsedDockerURL]v2Manifest
+	imageV2Manifests  map[common.ParsedDockerURL]*typesV2.ImageManifest
+	imageConfigs      map[common.ParsedDockerURL]*typesV2.ImageConfig
 	layersIndex       map[string]int
 }
 
@@ -78,15 +76,15 @@ func NewRepositoryBackend(username string, password string, insecure common.Inse
 		hostsV1fallback:   false,
 		hostsV2Support:    make(map[string]bool),
 		hostsV2AuthTokens: make(map[string]map[string]string),
-		imageManifests:    make(map[types.ParsedDockerURL]v2Manifest),
-		imageV2Manifests:  make(map[types.ParsedDockerURL]*typesV2.ImageManifest),
-		imageConfigs:      make(map[types.ParsedDockerURL]*typesV2.ImageConfig),
+		imageManifests:    make(map[common.ParsedDockerURL]v2Manifest),
+		imageV2Manifests:  make(map[common.ParsedDockerURL]*typesV2.ImageManifest),
+		imageConfigs:      make(map[common.ParsedDockerURL]*typesV2.ImageConfig),
 		layersIndex:       make(map[string]int),
 	}
 }
 
-func (rb *RepositoryBackend) GetImageInfo(url string) ([]string, *types.ParsedDockerURL, error) {
-	dockerURL, err := docker.ParseDockerURL(url)
+func (rb *RepositoryBackend) GetImageInfo(url string) ([]string, *common.ParsedDockerURL, error) {
+	dockerURL, err := common.ParseDockerURL(url)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -129,7 +127,7 @@ func (rb *RepositoryBackend) GetImageInfo(url string) ([]string, *types.ParsedDo
 	return rb.getImageInfoV1(dockerURL)
 }
 
-func (rb *RepositoryBackend) BuildACI(layerIDs []string, dockerURL *types.ParsedDockerURL, outputDir string, tmpBaseDir string, compression common.Compression) ([]string, []*schema.ImageManifest, error) {
+func (rb *RepositoryBackend) BuildACI(layerIDs []string, dockerURL *common.ParsedDockerURL, outputDir string, tmpBaseDir string, compression common.Compression) ([]string, []*schema.ImageManifest, error) {
 	if rb.hostsV1fallback || !rb.hostsV2Support[dockerURL.IndexURL] {
 		return rb.buildACIV1(layerIDs, dockerURL, outputDir, tmpBaseDir, compression)
 	} else {

@@ -32,7 +32,6 @@ import (
 
 	"github.com/appc/docker2aci/lib/common"
 	"github.com/appc/docker2aci/lib/internal"
-	"github.com/appc/docker2aci/lib/internal/docker"
 	"github.com/appc/docker2aci/lib/internal/tarball"
 	"github.com/appc/docker2aci/lib/internal/types"
 	"github.com/appc/docker2aci/lib/internal/typesV2"
@@ -51,8 +50,8 @@ func NewFileBackend(file *os.File) *FileBackend {
 	}
 }
 
-func (lb *FileBackend) GetImageInfo(dockerURL string) ([]string, *types.ParsedDockerURL, error) {
-	parsedDockerURL, err := docker.ParseDockerURL(dockerURL)
+func (lb *FileBackend) GetImageInfo(dockerURL string) ([]string, *common.ParsedDockerURL, error) {
+	parsedDockerURL, err := common.ParseDockerURL(dockerURL)
 	if err != nil {
 		// a missing Docker URL could mean that the file only contains one
 		// image, so we ignore the error here, we'll handle it in getImageID
@@ -79,7 +78,7 @@ func (lb *FileBackend) GetImageInfo(dockerURL string) ([]string, *types.ParsedDo
 	return ancestry, parsedDockerURL, nil
 }
 
-func (lb *FileBackend) BuildACI(layerIDs []string, dockerURL *types.ParsedDockerURL, outputDir string, tmpBaseDir string, compression common.Compression) ([]string, []*schema.ImageManifest, error) {
+func (lb *FileBackend) BuildACI(layerIDs []string, dockerURL *common.ParsedDockerURL, outputDir string, tmpBaseDir string, compression common.Compression) ([]string, []*schema.ImageManifest, error) {
 	if strings.Contains(layerIDs[0], ":") {
 		return lb.BuildACIV22(layerIDs, dockerURL, outputDir, tmpBaseDir, compression)
 	}
@@ -131,7 +130,7 @@ func (lb *FileBackend) BuildACI(layerIDs []string, dockerURL *types.ParsedDocker
 	return aciLayerPaths, aciManifests, nil
 }
 
-func (lb *FileBackend) BuildACIV22(layerIDs []string, dockerURL *types.ParsedDockerURL, outputDir string, tmpBaseDir string, compression common.Compression) ([]string, []*schema.ImageManifest, error) {
+func (lb *FileBackend) BuildACIV22(layerIDs []string, dockerURL *common.ParsedDockerURL, outputDir string, tmpBaseDir string, compression common.Compression) ([]string, []*schema.ImageManifest, error) {
 	if len(layerIDs) < 2 {
 		return nil, nil, fmt.Errorf("insufficient layers for oci image")
 	}
@@ -186,7 +185,7 @@ func (lb *FileBackend) BuildACIV22(layerIDs []string, dockerURL *types.ParsedDoc
 	return aciLayerPaths, aciManifests, nil
 }
 
-func getImageID(file *os.File, dockerURL *types.ParsedDockerURL, name string) (string, []string, *types.ParsedDockerURL, error) {
+func getImageID(file *os.File, dockerURL *common.ParsedDockerURL, name string) (string, []string, *common.ParsedDockerURL, error) {
 	log.Debug("getting image id...")
 	type tags map[string]string
 	type apps map[string]tags
@@ -257,7 +256,7 @@ func getImageID(file *os.File, dockerURL *types.ParsedDockerURL, name string) (s
 			}
 
 			if dockerURL == nil {
-				dockerURL = &types.ParsedDockerURL{
+				dockerURL = &common.ParsedDockerURL{
 					IndexURL:  "",
 					Tag:       tag,
 					ImageName: appName,
@@ -274,7 +273,7 @@ func getImageID(file *os.File, dockerURL *types.ParsedDockerURL, name string) (s
 			}
 
 			if dockerURL == nil {
-				dockerURL = &types.ParsedDockerURL{
+				dockerURL = &common.ParsedDockerURL{
 					IndexURL:  "",
 					Tag:       tag,
 					ImageName: name,
