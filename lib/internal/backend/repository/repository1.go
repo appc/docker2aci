@@ -30,7 +30,6 @@ import (
 	"github.com/appc/docker2aci/lib/internal"
 	"github.com/appc/docker2aci/lib/internal/types"
 	"github.com/appc/docker2aci/lib/internal/util"
-	"github.com/appc/docker2aci/pkg/log"
 	"github.com/appc/spec/schema"
 	"github.com/coreos/ioprogress"
 )
@@ -121,8 +120,8 @@ func (rb *RepositoryBackend) buildACIV1(layerIDs []string, dockerURL *common.Par
 	var curPwl []string
 
 	for i := len(layerIDs) - 1; i >= 0; i-- {
-		log.Debug("Generating layer ACI...")
-		aciPath, manifest, err := internal.GenerateACI(i, layerDatas[i], dockerURL, outputDir, layerFiles[i], curPwl, compression)
+		rb.debug.Println("Generating layer ACI...")
+		aciPath, manifest, err := internal.GenerateACI(i, layerDatas[i], dockerURL, outputDir, layerFiles[i], curPwl, compression, rb.debug)
 		if err != nil {
 			return nil, nil, fmt.Errorf("error generating ACI: %v", err)
 		}

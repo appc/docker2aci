@@ -33,7 +33,6 @@ import (
 	"github.com/appc/docker2aci/lib/internal/types"
 	"github.com/appc/docker2aci/lib/internal/typesV2"
 	"github.com/appc/docker2aci/lib/internal/util"
-	"github.com/appc/docker2aci/pkg/log"
 	"github.com/appc/spec/schema"
 	"github.com/coreos/pkg/progressutil"
 )
@@ -160,8 +159,8 @@ func (rb *RepositoryBackend) buildACIV21(layerIDs []string, dockerURL *common.Pa
 	var aciManifests []*schema.ImageManifest
 	var curPwl []string
 	for i := len(layerIDs) - 1; i >= 0; i-- {
-		log.Debug("Generating layer ACI...")
-		aciPath, aciManifest, err := internal.GenerateACI(i, layerDatas[i], dockerURL, outputDir, layerFiles[i], curPwl, compression)
+		rb.debug.Println("Generating layer ACI...")
+		aciPath, aciManifest, err := internal.GenerateACI(i, layerDatas[i], dockerURL, outputDir, layerFiles[i], curPwl, compression, rb.debug)
 		if err != nil {
 			return nil, nil, fmt.Errorf("error generating ACI: %v", err)
 		}
@@ -259,7 +258,7 @@ func (rb *RepositoryBackend) buildACIV22(layerIDs []string, dockerURL *common.Pa
 	var curPwl []string
 	var i int
 	for i = 0; i < len(layerIDs)-1; i++ {
-		log.Debug("Generating layer ACI...")
+		rb.debug.Println("Generating layer ACI...")
 		aciPath, aciManifest, err := internal.GenerateACI22LowerLayer(dockerURL, layerIDs[i], outputDir, layerFiles[i], curPwl, compression)
 		if err != nil {
 			return nil, nil, fmt.Errorf("error generating ACI: %v", err)
@@ -268,8 +267,8 @@ func (rb *RepositoryBackend) buildACIV22(layerIDs []string, dockerURL *common.Pa
 		aciManifests = append(aciManifests, aciManifest)
 		curPwl = aciManifest.PathWhitelist
 	}
-	log.Debug("Generating layer ACI...")
-	aciPath, aciManifest, err := internal.GenerateACI22TopLayer(dockerURL, rb.imageConfigs[*dockerURL], layerIDs[i], outputDir, layerFiles[i], curPwl, compression, aciManifests)
+	rb.debug.Println("Generating layer ACI...")
+	aciPath, aciManifest, err := internal.GenerateACI22TopLayer(dockerURL, rb.imageConfigs[*dockerURL], layerIDs[i], outputDir, layerFiles[i], curPwl, compression, aciManifests, rb.debug)
 	if err != nil {
 		return nil, nil, fmt.Errorf("error generating ACI: %v", err)
 	}

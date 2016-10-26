@@ -27,6 +27,7 @@ import (
 	"github.com/appc/docker2aci/lib/common"
 	"github.com/appc/docker2aci/lib/internal/typesV2"
 	"github.com/appc/docker2aci/lib/internal/util"
+	"github.com/appc/docker2aci/pkg/log"
 	"github.com/appc/spec/schema"
 )
 
@@ -66,9 +67,11 @@ type RepositoryBackend struct {
 	imageV2Manifests  map[common.ParsedDockerURL]*typesV2.ImageManifest
 	imageConfigs      map[common.ParsedDockerURL]*typesV2.ImageConfig
 	layersIndex       map[string]int
+
+	debug log.Logger
 }
 
-func NewRepositoryBackend(username string, password string, insecure common.InsecureConfig) *RepositoryBackend {
+func NewRepositoryBackend(username string, password string, insecure common.InsecureConfig, debug log.Logger) *RepositoryBackend {
 	return &RepositoryBackend{
 		username:          username,
 		password:          password,
@@ -80,6 +83,7 @@ func NewRepositoryBackend(username string, password string, insecure common.Inse
 		imageV2Manifests:  make(map[common.ParsedDockerURL]*typesV2.ImageManifest),
 		imageConfigs:      make(map[common.ParsedDockerURL]*typesV2.ImageConfig),
 		layersIndex:       make(map[string]int),
+		debug:             debug,
 	}
 }
 

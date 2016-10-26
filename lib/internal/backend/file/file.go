@@ -41,12 +41,15 @@ import (
 )
 
 type FileBackend struct {
-	file *os.File
+	file        *os.File
+	debug, info log.Logger
 }
 
-func NewFileBackend(file *os.File) *FileBackend {
+func NewFileBackend(file *os.File, debug, info log.Logger) *FileBackend {
 	return &FileBackend{
-		file: file,
+		file:  file,
+		debug: debug,
+		info:  info,
 	}
 }
 
@@ -60,13 +63,13 @@ func (lb *FileBackend) GetImageInfo(dockerURL string) ([]string, *common.ParsedD
 	var ancestry []string
 	// default file name is the tar name stripped
 	name := strings.Split(filepath.Base(lb.file.Name()), ".")[0]
-	appImageID, ancestry, parsedDockerURL, err := getImageID(lb.file, parsedDockerURL, name)
+	appImageID, ancestry, parsedDockerURL, err := getImageID(lb.file, parsedDockerURL, name, lb.debug)
 	if err != nil {
 		return nil, nil, err
 	}
 
 	if len(ancestry) == 0 {
-		ancestry, err = getAncestry(lb.file, appImageID)
+		ancestry, err = getAncestry(lb.file, appImageID, lb.debug)
 		if err != nil {
 			return nil, nil, fmt.Errorf("error getting ancestry: %v", err)
 		}
@@ -110,14 +113,14 @@ func (lb *FileBackend) BuildACI(layerIDs []string, dockerURL *common.ParsedDocke
 		tmpLayerPath += ".tar"
 
 		layerTarPath := path.Join(layerIDs[i], "layer.tar")
-		layerFile, err := extractEmbeddedLayer(lb.file, layerTarPath, tmpLayerPath)
+		layerFile, err := extractEmbeddedLayer(lb.file, layerTarPath, tmpLayerPath, lb.info)
 		if err != nil {
 			return nil, nil, fmt.Errorf("error getting layer from file: %v", err)
 		}
 		defer layerFile.Close()
 
-		log.Debug("Generating layer ACI...")
-		aciPath, manifest, err := internal.GenerateACI(i, layerData, dockerURL, outputDir, layerFile, curPwl, compression)
+		lb.debug.Println("Generating layer ACI...")
+		aciPath, manifest, err := internal.GenerateACI(i, layerData, dockerURL, outputDir, layerFile, curPwl, compression, lb.debug)
 		if err != nil {
 			return nil, nil, fmt.Errorf("error generating ACI: %v", err)
 		}
@@ -160,18 +163,18 @@ func (lb *FileBackend) BuildACIV22(layerIDs []string, dockerURL *common.ParsedDo
 		tmpLayerPath := path.Join(tmpDir, parts[1])
 		tmpLayerPath += ".tar"
 		layerTarPath := path.Join(append([]string{"blobs"}, parts...)...)
-		layerFile, err := extractEmbeddedLayer(lb.file, layerTarPath, tmpLayerPath)
+		layerFile, err := extractEmbeddedLayer(lb.file, layerTarPath, tmpLayerPath, lb.info)
 		if err != nil {
 			return nil, nil, fmt.Errorf("error getting layer from file: %v", err)
 		}
 		defer layerFile.Close()
-		log.Debug("Generating layer ACI...")
+		lb.debug.Println("Generating layer ACI...")
 		var aciPath string
 		var manifest *schema.ImageManifest
 		if i != 0 {
 			aciPath, manifest, err = internal.GenerateACI22LowerLayer(dockerURL, parts[1], outputDir, layerFile, curPwl, compression)
 		} else {
-			aciPath, manifest, err = internal.GenerateACI22TopLayer(dockerURL, &imageConfig, parts[1], outputDir, layerFile, curPwl, compression, aciManifests)
+			aciPath, manifest, err = internal.GenerateACI22TopLayer(dockerURL, &imageConfig, parts[1], outputDir, layerFile, curPwl, compression, aciManifests, lb.debug)
 		}
 		if err != nil {
 			return nil, nil, fmt.Errorf("error generating ACI: %v", err)
@@ -185,8 +188,8 @@ func (lb *FileBackend) BuildACIV22(layerIDs []string, dockerURL *common.ParsedDo
 	return aciLayerPaths, aciManifests, nil
 }
 
-func getImageID(file *os.File, dockerURL *common.ParsedDockerURL, name string) (string, []string, *common.ParsedDockerURL, error) {
-	log.Debug("getting image id...")
+func getImageID(file *os.File, dockerURL *common.ParsedDockerURL, name string, debug log.Logger) (string, []string, *common.ParsedDockerURL, error) {
+	debug.Println("getting image id...")
 	type tags map[string]string
 	type apps map[string]tags
 
@@ -390,8 +393,8 @@ func getTarFileBytes(file *os.File, path string) ([]byte, error) {
 	return fileBytes, nil
 }
 
-func extractEmbeddedLayer(file *os.File, layerTarPath string, outputPath string) (*os.File, error) {
-	log.Info("Extracting ", layerTarPath, "\n")
+func extractEmbeddedLayer(file *os.File, layerTarPath string, outputPath string, info log.Logger) (*os.File, error) {
+	info.Println("Extracting ", layerTarPath)
 	_, err := file.Seek(0, 0)
 	if err != nil {
 		return nil, fmt.Errorf("error seeking file: %v", err)
@@ -430,7 +433,7 @@ func extractEmbeddedLayer(file *os.File, layerTarPath string, outputPath string)
 // of dependencies starting from the topmost image to the base.
 // It checks for dependency loops via duplicate detection in the image
 // chain and errors out in such cases.
-func getAncestry(file *os.File, imgID string) ([]string, error) {
+func getAncestry(file *os.File, imgID string, debug log.Logger) ([]string, error) {
 	var ancestry []string
 	deps := make(map[string]bool)
 
@@ -443,8 +446,8 @@ func getAncestry(file *os.File, imgID string) ([]string, error) {
 		}
 		deps[curImgID] = true
 		ancestry = append(ancestry, curImgID)
-		log.Debug(fmt.Sprintf("Getting ancestry for layer %q", curImgID))
-		curImgID, err = getParent(file, curImgID)
+		debug.Printf("Getting ancestry for layer %q", curImgID)
+		curImgID, err = getParent(file, curImgID, debug)
 		if err != nil {
 			return nil, err
 		}
@@ -452,7 +455,7 @@ func getAncestry(file *os.File, imgID string) ([]string, error) {
 	return ancestry, nil
 }
 
-func getParent(file *os.File, imgID string) (string, error) {
+func getParent(file *os.File, imgID string, debug log.Logger) (string, error) {
 	var parent string
 
 	_, err := file.Seek(0, 0)
@@ -484,6 +487,6 @@ func getParent(file *os.File, imgID string) (string, error) {
 		return "", err
 	}
 
-	log.Debug(fmt.Sprintf("Layer %q depends on layer %q", imgID, parent))
+	debug.Printf("Layer %q depends on layer %q", imgID, parent)
 	return parent, nil
 }
