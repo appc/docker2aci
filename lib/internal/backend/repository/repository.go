@@ -22,7 +22,7 @@ package repository
 import (
 	"fmt"
 	"net/http"
-	"path"
+	"net/url"
 
 	"github.com/appc/docker2aci/lib/common"
 	"github.com/appc/docker2aci/lib/internal/docker"
@@ -130,13 +130,12 @@ func (rb *RepositoryBackend) supportsRegistry(indexURL string, version registryV
 	case registryV1:
 		URLPath = "v1/_ping"
 	case registryV2:
-		URLPath = "v2"
+		URLPath = "v2/"
 	}
-	URLStr := path.Join(indexURL, URLPath)
 
 	fetch := func(schema string) (res *http.Response, err error) {
-		url := schema + "://" + URLStr
-		req, err := http.NewRequest("GET", url, nil)
+		u := url.URL{Scheme: schema, Host: indexURL, Path: URLPath}
+		req, err := http.NewRequest("GET", u.String(), nil)
 		if err != nil {
 			return nil, err
 		}
