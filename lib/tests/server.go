@@ -14,7 +14,7 @@ import (
 func RunDockerRegistry(t *testing.T, imgPath, imgName, imgRef, manifestMediaType string) *httptest.Server {
 	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		t.Logf("path requested: %s", r.URL.Path)
-		if r.URL.Path == "/v2" {
+		if r.URL.Path == "/v2/" {
 			w.Header().Add("Docker-Distribution-API-Version", "registry/2.0")
 			w.WriteHeader(http.StatusOK)
 			return
