@@ -94,7 +94,6 @@ func (rb *RepositoryBackend) GetImageInfo(url string) ([]string, *types.ParsedDo
 	var supportsV2, supportsV1, ok bool
 	var URLSchema string
 
-	//probe v2
 	if supportsV2, ok = rb.hostsV2Support[dockerURL.IndexURL]; !ok {
 		var err error
 		URLSchema, supportsV2, err = rb.supportsRegistry(dockerURL.IndexURL, registryV2)
@@ -111,11 +110,10 @@ func (rb *RepositoryBackend) GetImageInfo(url string) ([]string, *types.ParsedDo
 		if !isErrHTTP404(err) {
 			return layers, dockerURL, err
 		}
-		// fallback on failure
+		// fallback on 404 failure
 		rb.hostsV1fallback = true
 	}
 
-	// probe v1
 	URLSchema, supportsV1, err = rb.supportsRegistry(dockerURL.IndexURL, registryV1)
 	if err != nil {
 		return nil, nil, err
