@@ -308,7 +308,7 @@ func (rb *RepositoryBackend) getManifestV2(dockerURL *types.ParsedDockerURL) ([]
 	defer res.Body.Close()
 
 	if res.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("unexpected http code: %d, URL: %s", res.StatusCode, req.URL)
+		return nil, &httpStatusErr{res.StatusCode, req.URL}
 	}
 
 	switch res.Header.Get("content-type") {
@@ -520,7 +520,7 @@ func (rb *RepositoryBackend) getLayerV2(layerID string, dockerURL *types.ParsedD
 	}
 
 	if res.StatusCode != http.StatusOK {
-		return nil, nil, fmt.Errorf("HTTP code: %d. URL: %s", res.StatusCode, req.URL)
+		return nil, nil, &httpStatusErr{res.StatusCode, req.URL}
 	}
 
 	var in io.Reader
@@ -638,7 +638,7 @@ func (rb *RepositoryBackend) makeRequest(req *http.Request, repo string, acceptH
 	case http.StatusOK:
 		break
 	default:
-		return nil, fmt.Errorf("unexpected http code: %d, URL: %s", res.StatusCode, authReq.URL)
+		return nil, &httpStatusErr{res.StatusCode, authReq.URL}
 	}
 
 	tokenBlob, err := ioutil.ReadAll(res.Body)

@@ -158,7 +158,7 @@ func (rb *RepositoryBackend) getRepoDataV1(indexURL string, remote string) (*Rep
 	defer res.Body.Close()
 
 	if res.StatusCode != 200 {
-		return nil, fmt.Errorf("HTTP code: %d, URL: %s", res.StatusCode, req.URL)
+		return nil, &httpStatusErr{res.StatusCode, req.URL}
 	}
 
 	var tokens []string
@@ -206,7 +206,7 @@ func (rb *RepositoryBackend) getImageIDFromTagV1(registry string, appName string
 	defer res.Body.Close()
 
 	if res.StatusCode != 200 {
-		return "", fmt.Errorf("HTTP code: %d. URL: %s", res.StatusCode, req.URL)
+		return "", &httpStatusErr{res.StatusCode, req.URL}
 	}
 
 	j, err := ioutil.ReadAll(res.Body)
@@ -245,7 +245,7 @@ func (rb *RepositoryBackend) getAncestryV1(imgID, registry string, repoData *Rep
 	defer res.Body.Close()
 
 	if res.StatusCode != 200 {
-		return nil, fmt.Errorf("HTTP code: %d. URL: %s", res.StatusCode, req.URL)
+		return nil, &httpStatusErr{res.StatusCode, req.URL}
 	}
 
 	var ancestry []string
@@ -277,7 +277,7 @@ func (rb *RepositoryBackend) getJsonV1(imgID, registry string, repoData *RepoDat
 	defer res.Body.Close()
 
 	if res.StatusCode != 200 {
-		return nil, -1, fmt.Errorf("HTTP code: %d, URL: %s", res.StatusCode, req.URL)
+		return nil, -1, &httpStatusErr{res.StatusCode, req.URL}
 	}
 
 	imageSize := int64(-1)
@@ -315,7 +315,7 @@ func (rb *RepositoryBackend) getLayerV1(imgID, registry string, repoData *RepoDa
 
 	if res.StatusCode != 200 {
 		res.Body.Close()
-		return nil, fmt.Errorf("HTTP code: %d. URL: %s", res.StatusCode, req.URL)
+		return nil, &httpStatusErr{res.StatusCode, req.URL}
 	}
 
 	// if we didn't receive the size via X-Docker-Size when we retrieved the
