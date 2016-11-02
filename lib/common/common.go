@@ -20,7 +20,7 @@ import (
 	"regexp"
 
 	"github.com/appc/docker2aci/lib/internal/docker"
-	"github.com/appc/docker2aci/lib/internal/types"
+	"github.com/docker/distribution/reference"
 )
 
 type Compression int
@@ -34,8 +34,6 @@ var (
 	validId = regexp.MustCompile(`^(\w+:)?([A-Fa-f0-9]+)$`)
 )
 
-type ParsedDockerURL types.ParsedDockerURL
-
 const (
 	AppcDockerRegistryURL   = "appc.io/docker/registryurl"
 	AppcDockerRepository    = "appc.io/docker/repository"
@@ -45,6 +43,16 @@ const (
 	AppcDockerEntrypoint    = "appc.io/docker/entrypoint"
 	AppcDockerCmd           = "appc.io/docker/cmd"
 )
+
+const defaultTag = "latest"
+
+// ParsedDockerURL represents a parsed Docker URL.
+type ParsedDockerURL struct {
+	IndexURL  string
+	ImageName string
+	Tag       string
+	Digest    string
+}
 
 type ErrSeveralImages struct {
 	Msg    string
@@ -64,8 +72,29 @@ func (e *ErrSeveralImages) Error() string {
 // ParseDockerURL takes a Docker URL and returns a ParsedDockerURL with its
 // index URL, image name, and tag.
 func ParseDockerURL(arg string) (*ParsedDockerURL, error) {
-	p, err := docker.ParseDockerURL(arg)
-	return (*ParsedDockerURL)(p), err
+	r, err := reference.ParseNamed(arg)
+	if err != nil {
+		return nil, err
+	}
+
+	var tag, digest string
+	switch x := r.(type) {
+	case reference.Canonical:
+		digest = x.Digest().String()
+	case reference.NamedTagged:
+		tag = x.Tag()
+	default:
+		tag = defaultTag
+	}
+
+	indexURL, remoteName := docker.SplitReposName(r.Name())
+
+	return &ParsedDockerURL{
+		IndexURL:  indexURL,
+		ImageName: remoteName,
+		Tag:       tag,
+		Digest:    digest,
+	}, nil
 }
 
 // ValidateLayerId validates a layer ID
