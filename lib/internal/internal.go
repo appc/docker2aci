@@ -233,44 +233,42 @@ func GenerateManifest(layerData types.DockerImageData, dockerURL *common.ParsedD
 
 	if dockerConfig != nil {
 		exec := getExecCommand(dockerConfig.Entrypoint, dockerConfig.Cmd)
-		if exec != nil {
-			user, group := parseDockerUser(dockerConfig.User)
-			var env appctypes.Environment
-			for _, v := range dockerConfig.Env {
-				parts := strings.SplitN(v, "=", 2)
-				env.Set(parts[0], parts[1])
-			}
-			app := &appctypes.App{
-				Exec:             exec,
-				User:             user,
-				Group:            group,
-				Environment:      env,
-				WorkingDirectory: dockerConfig.WorkingDir,
-			}
-
-			app.MountPoints, err = convertVolumesToMPs(dockerConfig.Volumes)
-			if err != nil {
-				return nil, err
-			}
-
-			app.Ports, err = convertPorts(dockerConfig.ExposedPorts, dockerConfig.PortSpecs, debug)
-			if err != nil {
-				return nil, err
-			}
-
-			ep, cmd, err := generateEPCmdAnnotation(dockerConfig.Entrypoint, dockerConfig.Cmd)
-			if err != nil {
-				return nil, err
-			}
-			if len(ep) > 0 {
-				addAnno(common.AppcDockerEntrypoint, ep)
-			}
-			if len(cmd) > 0 {
-				addAnno(common.AppcDockerCmd, cmd)
-			}
-
-			genManifest.App = app
+		user, group := parseDockerUser(dockerConfig.User)
+		var env appctypes.Environment
+		for _, v := range dockerConfig.Env {
+			parts := strings.SplitN(v, "=", 2)
+			env.Set(parts[0], parts[1])
 		}
+		app := &appctypes.App{
+			Exec:             exec,
+			User:             user,
+			Group:            group,
+			Environment:      env,
+			WorkingDirectory: dockerConfig.WorkingDir,
+		}
+
+		app.MountPoints, err = convertVolumesToMPs(dockerConfig.Volumes)
+		if err != nil {
+			return nil, err
+		}
+
+		app.Ports, err = convertPorts(dockerConfig.ExposedPorts, dockerConfig.PortSpecs, debug)
+		if err != nil {
+			return nil, err
+		}
+
+		ep, cmd, err := generateEPCmdAnnotation(dockerConfig.Entrypoint, dockerConfig.Cmd)
+		if err != nil {
+			return nil, err
+		}
+		if len(ep) > 0 {
+			addAnno(common.AppcDockerEntrypoint, ep)
+		}
+		if len(cmd) > 0 {
+			addAnno(common.AppcDockerCmd, cmd)
+		}
+
+		genManifest.App = app
 	}
 
 	if layerData.Parent != "" {
