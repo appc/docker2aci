@@ -247,6 +247,8 @@ func GenerateManifest(layerData types.DockerImageData, dockerURL *common.ParsedD
 			WorkingDirectory: dockerConfig.WorkingDir,
 		}
 
+		app.UserLabels = dockerConfig.Labels
+
 		app.MountPoints, err = convertVolumesToMPs(dockerConfig.Volumes)
 		if err != nil {
 			return nil, err
