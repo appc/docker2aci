@@ -7,7 +7,7 @@ DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
 ORG_PATH="github.com/appc"
 REPO_PATH="${ORG_PATH}/docker2aci"
-VERSION=$(git describe --dirty)
+VERSION=$(git describe --dirty --always)
 GLDFLAGS="-X ${REPO_PATH}/lib.Version=${VERSION}"
 
 if [ ! -h ${DIR}/gopath/src/${REPO_PATH} ]; then
