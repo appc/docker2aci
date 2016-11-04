@@ -1,8 +1,8 @@
-hash: 5f32573a0491c3c15d8e6654967c0a9b6798ed25cb9f1ae617f916be1730fb5c
-updated: 2016-10-21T13:40:38.649778864Z
+hash: 1792eab6cf0ce9dc090038e49a5e80de41e5cbb38e06852c41915d1758f27239
+updated: 2016-11-04T06:43:11.742331752-07:00
 imports:
 - name: github.com/appc/spec
-  version: f329150233aa3ac6c83ab5ba02a2b5a8bd03d365
+  version: 2a251f75b2520d7a1c6c10562a1ea4e303af3e67
   subpackages:
   - aci
   - pkg/acirenderer
