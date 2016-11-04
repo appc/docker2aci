@@ -226,6 +226,7 @@ func GenerateManifest(layerData types.DockerImageData, dockerURL *common.ParsedD
 		addAnno("created", layerData.Created.Format(time.RFC3339))
 	}
 	addAnno("docker-comment", layerData.Comment)
+	addAnno(common.AppcDockerOriginalName, dockerURL.OriginalName)
 	addAnno(common.AppcDockerRegistryURL, dockerURL.IndexURL)
 	addAnno(common.AppcDockerRepository, dockerURL.ImageName)
 	addAnno(common.AppcDockerImageID, layerData.ID)
@@ -356,6 +357,7 @@ func GenerateManifestV22(name string, dockerURL *common.ParsedDockerURL, config 
 	addAnno("author", config.Author)
 	addAnno("created", config.Created)
 
+	addAnno(common.AppcDockerOriginalName, dockerURL.OriginalName)
 	addAnno(common.AppcDockerRegistryURL, dockerURL.IndexURL)
 	addAnno(common.AppcDockerRepository, dockerURL.ImageName)
 	addAnno(common.AppcDockerImageID, imageDigest)

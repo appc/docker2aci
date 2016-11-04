@@ -35,6 +35,12 @@ var (
 )
 
 const (
+	// AppcDockerOriginalName is the unmodified name this image was originally
+	// referenced by for fetching, e.g. something like "nginx:tag" or
+	// "quay.io/user/image:latest" This is identical in most cases to
+	// 'registryurl/repository:tag' but may differ for the default Dockerhub
+	// registry or if the tag was inferred as latest.
+	AppcDockerOriginalName  = "appc.io/docker/originalname"
 	AppcDockerRegistryURL   = "appc.io/docker/registryurl"
 	AppcDockerRepository    = "appc.io/docker/repository"
 	AppcDockerTag           = "appc.io/docker/tag"
@@ -48,10 +54,11 @@ const defaultTag = "latest"
 
 // ParsedDockerURL represents a parsed Docker URL.
 type ParsedDockerURL struct {
-	IndexURL  string
-	ImageName string
-	Tag       string
-	Digest    string
+	OriginalName string
+	IndexURL     string
+	ImageName    string
+	Tag          string
+	Digest       string
 }
 
 type ErrSeveralImages struct {
@@ -90,10 +97,11 @@ func ParseDockerURL(arg string) (*ParsedDockerURL, error) {
 	indexURL, remoteName := docker.SplitReposName(r.Name())
 
 	return &ParsedDockerURL{
-		IndexURL:  indexURL,
-		ImageName: remoteName,
-		Tag:       tag,
-		Digest:    digest,
+		OriginalName: arg,
+		IndexURL:     indexURL,
+		ImageName:    remoteName,
+		Tag:          tag,
+		Digest:       digest,
 	}, nil
 }
 

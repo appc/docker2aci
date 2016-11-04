@@ -20,6 +20,8 @@ import (
 	"github.com/appc/spec/schema/types"
 )
 
+const variableTestValue = "variant"
+
 var dockerConfig = typesV2.ImageConfig{
 	Created:      "2016-06-02T21:43:31.291506236Z",
 	Author:       "rkt developer <rkt-dev@googlegroups.com>",
@@ -49,80 +51,87 @@ var dockerConfig = typesV2.ImageConfig{
 	},
 }
 
-var expectedImageManifest = schema.ImageManifest{
-	ACKind:    types.ACKind("ImageManifest"),
-	ACVersion: schema.AppContainerVersion,
-	Name:      *types.MustACIdentifier("variant"),
-	Labels: []types.Label{
-		types.Label{
-			Name:  *types.MustACIdentifier("arch"),
-			Value: "amd64",
-		},
-		types.Label{
-			Name:  *types.MustACIdentifier("os"),
-			Value: "linux",
-		},
-		types.Label{
-			Name:  *types.MustACIdentifier("version"),
-			Value: "v0.1.0",
-		},
-	},
-	App: &types.App{
-		Exec: []string{
-			"/bin/sh",
-			"-c",
-			"echo",
-			"foo",
-		},
-		User:  "0",
-		Group: "0",
-		Environment: []types.EnvironmentVariable{
-			{
-				Name:  "FOO",
-				Value: "1",
+func expectedManifest(registryUrl, imageName string) schema.ImageManifest {
+	return schema.ImageManifest{
+		ACKind:    types.ACKind("ImageManifest"),
+		ACVersion: schema.AppContainerVersion,
+		Name:      *types.MustACIdentifier("variant"),
+		Labels: []types.Label{
+			types.Label{
+				Name:  *types.MustACIdentifier("arch"),
+				Value: "amd64",
+			},
+			types.Label{
+				Name:  *types.MustACIdentifier("os"),
+				Value: "linux",
+			},
+			types.Label{
+				Name:  *types.MustACIdentifier("version"),
+				Value: "v0.1.0",
 			},
 		},
-		WorkingDirectory: "/",
-		Ports: []types.Port{
-			{
-				Name:            "80",
-				Protocol:        "tcp",
-				Port:            80,
-				Count:           1,
-				SocketActivated: false,
+		App: &types.App{
+			Exec: []string{
+				"/bin/sh",
+				"-c",
+				"echo",
+				"foo",
+			},
+			User:  "0",
+			Group: "0",
+			Environment: []types.EnvironmentVariable{
+				{
+					Name:  "FOO",
+					Value: "1",
+				},
+			},
+			WorkingDirectory: "/",
+			Ports: []types.Port{
+				{
+					Name:            "80",
+					Protocol:        "tcp",
+					Port:            80,
+					Count:           1,
+					SocketActivated: false,
+				},
 			},
 		},
-	},
-	Annotations: []types.Annotation{
-		{
-			Name:  *types.MustACIdentifier("author"),
-			Value: "rkt developer <rkt-dev@googlegroups.com>",
+		Annotations: []types.Annotation{
+			{
+				Name:  *types.MustACIdentifier("author"),
+				Value: "rkt developer <rkt-dev@googlegroups.com>",
+			},
+			{
+				Name:  *types.MustACIdentifier("created"),
+				Value: "2016-06-02T21:43:31.291506236Z",
+			},
+			{
+				Name:  *types.MustACIdentifier("appc.io/docker/registryurl"),
+				Value: registryUrl,
+			},
+			{
+				Name:  *types.MustACIdentifier("appc.io/docker/repository"),
+				Value: "docker2aci/dockerv22test",
+			},
+			{
+				Name:  *types.MustACIdentifier("appc.io/docker/imageid"),
+				Value: variableTestValue,
+				// Different each testrun for unknown reasons
+			},
+			{
+				Name:  *types.MustACIdentifier("appc.io/docker/originalname"),
+				Value: imageName,
+			},
+			{
+				Name:  *types.MustACIdentifier("appc.io/docker/entrypoint"),
+				Value: "[\"/bin/sh\",\"-c\",\"echo\"]",
+			},
+			{
+				Name:  *types.MustACIdentifier("appc.io/docker/cmd"),
+				Value: "[\"foo\"]",
+			},
 		},
-		{
-			Name:  *types.MustACIdentifier("created"),
-			Value: "2016-06-02T21:43:31.291506236Z",
-		},
-		{
-			Name:  *types.MustACIdentifier("appc.io/docker/registryurl"),
-			Value: "variant",
-		},
-		{
-			Name:  *types.MustACIdentifier("appc.io/docker/repository"),
-			Value: "docker2aci/dockerv22test",
-		},
-		{
-			Name:  *types.MustACIdentifier("appc.io/docker/imageid"),
-			Value: "variant",
-		},
-		{
-			Name:  *types.MustACIdentifier("appc.io/docker/entrypoint"),
-			Value: "[\"/bin/sh\",\"-c\",\"echo\"]",
-		},
-		{
-			Name:  *types.MustACIdentifier("appc.io/docker/cmd"),
-			Value: "[\"foo\"]",
-		},
-	},
+	}
 }
 
 func newDocker22Image(layers []Layer) Docker22Image {
@@ -182,7 +191,10 @@ func TestFetchingByTagV22(t *testing.T) {
 	server := RunDockerRegistry(t, tmpDir, imgName, imgRef, typesV2.MediaTypeDockerV22Manifest)
 	defer server.Close()
 
-	localUrl := path.Join(strings.TrimPrefix(server.URL, "http://"), imgName) + ":" + imgRef
+	bareServerURL := strings.TrimPrefix(server.URL, "http://")
+	localUrl := path.Join(bareServerURL, imgName) + ":" + imgRef
+
+	expectedImageManifest := expectedManifest(bareServerURL, localUrl)
 
 	outputDir, err := ioutil.TempDir("", "docker2aci-test-")
 	if err != nil {
@@ -217,53 +229,44 @@ func manifestEqual(manifest, expected *schema.ImageManifest) error {
 	if manifest.ACKind != expected.ACKind {
 		return fmt.Errorf("expected ACKind %q, got %q", expected.ACKind, manifest.ACKind)
 	}
+
 	if manifest.ACVersion != expected.ACVersion {
 		return fmt.Errorf("expected ACVersion %q, got %q", expected.ACVersion, manifest.ACVersion)
 	}
+
 	if !reflect.DeepEqual(*manifest.App, *expected.App) {
 		return fmt.Errorf("expected App %v, got %v", *expected.App, *manifest.App)
 	}
-	for _, label := range []string{"arch", "os", "version"} {
-		if err := checkLabel(label, manifest, expected); err != nil {
-			return err
+
+	if len(manifest.Labels) != len(expected.Labels) {
+		return fmt.Errorf("Labels not equal: %v != %v", manifest.Labels, expected.Labels)
+	}
+
+	for _, label := range manifest.Labels {
+		el, ok := expected.Labels.Get(label.Name.String())
+		if !ok {
+			return fmt.Errorf("expected label %v to exist, did not", label.Name)
+		}
+		if label.Value != el {
+			return fmt.Errorf("expected label %v values to match, but %v != %v", label.Name, el, label.Value)
 		}
 	}
-	for _, ann := range []string{
-		"author",
-		"created",
-		"appc.io/docker/repository",
-		"appc.io/docker/entrypoint",
-		"appc.io/docker/cmd",
-	} {
-		if err := checkAnnotation(ann, manifest, expected); err != nil {
-			return err
+
+	if len(manifest.Annotations) != len(expected.Annotations) {
+		return fmt.Errorf("annotations not equal: %v != %v", manifest.Annotations, expected.Annotations)
+	}
+	for _, ann := range manifest.Annotations {
+		ea, ok := expected.Annotations.Get(ann.Name.String())
+		if ea == variableTestValue {
+			// marker to let us know we don't have to assert on this value; skip it
+			continue
 		}
-	}
-
-	return nil
-}
-
-func checkLabel(name string, manifest, expected *schema.ImageManifest) error {
-	got, ok := manifest.GetLabel(name)
-	if !ok {
-		return fmt.Errorf("missing %q label", name)
-	}
-	exp, _ := expected.GetLabel(name)
-	if got != exp {
-		return fmt.Errorf("expected label %q, got %q", exp, got)
-	}
-
-	return nil
-}
-
-func checkAnnotation(name string, manifest, expected *schema.ImageManifest) error {
-	got, ok := manifest.GetAnnotation(name)
-	if !ok {
-		return fmt.Errorf("missing %q annotation", name)
-	}
-	exp, _ := expected.GetAnnotation(name)
-	if got != exp {
-		return fmt.Errorf("expected annotation %q, got %q", exp, got)
+		if !ok {
+			return fmt.Errorf("expected annotation %v to exist, did not", ann.Name)
+		}
+		if ea != ann.Value {
+			return fmt.Errorf("expected annotation %v values to match, but %v != %v", ann.Name, ea, ann.Value)
+		}
 	}
 
 	return nil
