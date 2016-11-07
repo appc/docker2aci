@@ -1,5 +1,5 @@
-hash: 1792eab6cf0ce9dc090038e49a5e80de41e5cbb38e06852c41915d1758f27239
-updated: 2016-11-04T06:43:11.742331752-07:00
+hash: ad84402ccb32c43d2901b53a933ac2163dc86ce76186e8549d5f6960ea942a41
+updated: 2016-11-07T10:46:26.562906391-08:00
 imports:
 - name: github.com/appc/spec
   version: 2a251f75b2520d7a1c6c10562a1ea4e303af3e67
@@ -31,7 +31,7 @@ imports:
   subpackages:
   - proto
 - name: github.com/klauspost/compress
-  version: 006acde2c5d283d2f8b8aa03d8f0cd2891c680cf
+  version: 14eb9c4951195779ecfbec34431a976de7335b0a
   subpackages:
   - flate
 - name: github.com/klauspost/cpuid
@@ -44,20 +44,24 @@ imports:
   version: 6e820ec55259e89ccd7092f3131c63e8419a349b
   subpackages:
   - specs-go
+  - specs-go/v1
 - name: github.com/spf13/pflag
-  version: 08b1a584251b5b62f458943640fc8ebd4d50aaa5
+  version: 94e98a55fb412fcbcfc302555cb990f5e1590627
 - name: go4.org
   version: 03efcb870d84809319ea509714dd6d19a1498483
   subpackages:
   - errorutil
 - name: golang.org/x/crypto
-  version: a7ead6ddf06233883deca151dffaef2effbf498f
+  version: c10c31b5e94b6f7a0283272dc2bb27163dcea24b
   subpackages:
+  - bcrypt
+  - blowfish
+  - ocsp
   - ssh/terminal
 - name: gopkg.in/inf.v0
   version: 3887ee99ecf07df5b447e9b00d9c0b2adaa9f3e4
 - name: k8s.io/kubernetes
-  version: 283137936a498aed572ee22af6774b6fb6e9fd94
+  version: 759dd0dfb826658c78db42d97b77b9594cd43333
   subpackages:
   - pkg/api/resource
   - pkg/conversion
