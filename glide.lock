@@ -41,7 +41,7 @@ imports:
 - name: github.com/klauspost/pgzip
   version: 95e8170c5d4da28db9c64dfc9ec3138ea4466fd4
 - name: github.com/opencontainers/image-spec
-  version: b472d5f4067ddca5cfbfea148dfaf7b42d43c5f0
+  version: 6e820ec55259e89ccd7092f3131c63e8419a349b
   subpackages:
   - specs-go
 - name: github.com/spf13/pflag
