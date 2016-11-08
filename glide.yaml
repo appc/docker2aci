@@ -20,6 +20,6 @@ import:
 - package: github.com/klauspost/pgzip
   version: 1.0.0
 - package: github.com/opencontainers/image-spec
-  version: v1.0.0-rc1
+  version: v1.0.0-rc2
   subpackages:
   - specs-go

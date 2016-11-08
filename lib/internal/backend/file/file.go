@@ -37,7 +37,7 @@ import (
 	"github.com/appc/docker2aci/lib/internal/typesV2"
 	"github.com/appc/docker2aci/pkg/log"
 	"github.com/appc/spec/schema"
-	spec "github.com/opencontainers/image-spec/specs-go"
+	spec "github.com/opencontainers/image-spec/specs-go/v1"
 )
 
 type FileBackend struct {
