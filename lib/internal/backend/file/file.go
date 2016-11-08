@@ -260,9 +260,10 @@ func getImageID(file *os.File, dockerURL *common.ParsedDockerURL, name string, d
 
 			if dockerURL == nil {
 				dockerURL = &common.ParsedDockerURL{
-					IndexURL:  "",
-					Tag:       tag,
-					ImageName: appName,
+					OriginalName: "",
+					IndexURL:     "",
+					Tag:          tag,
+					ImageName:    appName,
 				}
 			}
 
