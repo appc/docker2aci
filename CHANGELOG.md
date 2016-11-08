@@ -1,3 +1,14 @@
+## v0.14.0
+
+This release adds compatibility for OCI v1.0.0-rc2 types, introduces supports for converting image labels, and fixes some issues related to automatic fallback to registry API v1.
+
+ - log: introduce Logger interface ([#218](https://github.com/appc/docker2aci/pull/218))
+ - lib/internal: set UserLabels to be Docker image labels ([#223](https://github.com/appc/docker2aci/pull/223)).
+ - fetch: annotate originally requested name ([#224](https://github.com/appc/docker2aci/pull/224)).
+ - types: update OCI image-spec to rc2 ([#226](https://github.com/appc/docker2aci/pull/226)).
+ - lib/internal: fix v2 registry check URL ([#220](https://github.com/appc/docker2aci/pull/220))
+ - lib/internal: allow auto fallback from v2 API to v1 ([#222](https://github.com/appc/docker2aci/pull/222)).
+
 ## v0.13.0
 
 This release adds support for converting local OCI bundles and fixes two security issues (CVE-2016-7569 and CVE-2016-8579). It also includes fixes for several image fetching and conversion bugs.
