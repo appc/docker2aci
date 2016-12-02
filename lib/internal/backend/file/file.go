@@ -219,9 +219,20 @@ func getImageID(file *os.File, dockerURL *common.ParsedDockerURL, name string, d
 				return fmt.Errorf("error reading repositories file: %v", err)
 			}
 
-			var repositories apps
-			if err := json.Unmarshal(repob, &repositories); err != nil {
+			var unparsedRepositories apps
+			if err := json.Unmarshal(repob, &unparsedRepositories); err != nil {
 				return fmt.Errorf("error unmarshaling repositories file")
+			}
+
+			repositories := make(apps, 0)
+			// Normalize repository keys since the image potentially passed in is
+			// normalized
+			for key, val := range unparsedRepositories {
+				parsed, err := common.ParseDockerURL(key)
+				if err != nil {
+					return fmt.Errorf("error parsing key %q in repositories: %v", key, err)
+				}
+				repositories[parsed.ImageName] = val
 			}
 
 			if dockerURL == nil {
