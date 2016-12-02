@@ -54,10 +54,15 @@ func NewFileBackend(file *os.File, debug, info log.Logger) *FileBackend {
 }
 
 func (lb *FileBackend) GetImageInfo(dockerURL string) ([]string, *common.ParsedDockerURL, error) {
-	parsedDockerURL, err := common.ParseDockerURL(dockerURL)
-	if err != nil {
-		// a missing Docker URL could mean that the file only contains one
-		// image, so we ignore the error here, we'll handle it in getImageID
+	// a missing Docker URL could mean that the file only contains one
+	// image so it's okay for dockerURL to be blank
+	var parsedDockerURL *common.ParsedDockerURL
+	if dockerURL != "" {
+		var err error
+		parsedDockerURL, err = common.ParseDockerURL(dockerURL)
+		if err != nil {
+			return nil, nil, fmt.Errorf("image provided couldnot be parsed: %v", err)
+		}
 	}
 
 	var ancestry []string
