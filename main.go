@@ -148,26 +148,26 @@ func runDocker2ACI(arg string) error {
 }
 
 func printConvertedVolumes(manifest schema.ImageManifest) {
-	if manifest.App != nil && manifest.App.MountPoints != nil {
-		mps := manifest.App.MountPoints
-		if len(mps) > 0 {
-			fmt.Printf("\nConverted volumes:\n")
-			for _, mp := range mps {
-				fmt.Printf("\tname: %q, path: %q, readOnly: %v\n", mp.Name, mp.Path, mp.ReadOnly)
-			}
+	if manifest.App == nil {
+		return
+	}
+	if mps := manifest.App.MountPoints; len(mps) > 0 {
+		fmt.Printf("\nConverted volumes:\n")
+		for _, mp := range mps {
+			fmt.Printf("\tname: %q, path: %q, readOnly: %v\n", mp.Name, mp.Path, mp.ReadOnly)
 		}
 	}
 }
 
 func printConvertedPorts(manifest schema.ImageManifest) {
-	if manifest.App != nil && manifest.App.Ports != nil {
-		ports := manifest.App.Ports
-		if len(ports) > 0 {
-			fmt.Printf("\nConverted ports:\n")
-			for _, port := range ports {
-				fmt.Printf("\tname: %q, protocol: %q, port: %v, count: %v, socketActivated: %v\n",
-					port.Name, port.Protocol, port.Port, port.Count, port.SocketActivated)
-			}
+	if manifest.App == nil {
+		return
+	}
+	if ports := manifest.App.Ports; len(ports) > 0 {
+		fmt.Printf("\nConverted ports:\n")
+		for _, port := range ports {
+			fmt.Printf("\tname: %q, protocol: %q, port: %v, count: %v, socketActivated: %v\n",
+				port.Name, port.Protocol, port.Port, port.Count, port.SocketActivated)
 		}
 	}
 }
