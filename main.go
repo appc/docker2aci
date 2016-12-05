@@ -136,12 +136,8 @@ func runDocker2ACI(arg string) error {
 		return err
 	}
 
-	if err := printConvertedVolumes(*manifest); err != nil {
-		return err
-	}
-	if err := printConvertedPorts(*manifest); err != nil {
-		return err
-	}
+	printConvertedVolumes(*manifest)
+	printConvertedPorts(*manifest)
 
 	fmt.Printf("\nGenerated ACI(s):\n")
 	for _, aciFile := range aciLayerPaths {
@@ -151,7 +147,7 @@ func runDocker2ACI(arg string) error {
 	return nil
 }
 
-func printConvertedVolumes(manifest schema.ImageManifest) error {
+func printConvertedVolumes(manifest schema.ImageManifest) {
 	if manifest.App != nil && manifest.App.MountPoints != nil {
 		mps := manifest.App.MountPoints
 		if len(mps) > 0 {
@@ -161,11 +157,9 @@ func printConvertedVolumes(manifest schema.ImageManifest) error {
 			}
 		}
 	}
-
-	return nil
 }
 
-func printConvertedPorts(manifest schema.ImageManifest) error {
+func printConvertedPorts(manifest schema.ImageManifest) {
 	if manifest.App != nil && manifest.App.Ports != nil {
 		ports := manifest.App.Ports
 		if len(ports) > 0 {
@@ -176,8 +170,6 @@ func printConvertedPorts(manifest schema.ImageManifest) error {
 			}
 		}
 	}
-
-	return nil
 }
 
 func getManifest(aciPath string) (*schema.ImageManifest, error) {
