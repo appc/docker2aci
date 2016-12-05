@@ -208,7 +208,7 @@ func main() {
 		return
 	}
 
-	if len(args) < 1 {
+	if len(args) != 1 {
 		usage()
 		os.Exit(2)
 	}
