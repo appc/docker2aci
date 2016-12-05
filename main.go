@@ -189,9 +189,9 @@ func getManifest(aciPath string) (*schema.ImageManifest, error) {
 
 func usage() {
 	fmt.Fprintf(os.Stderr, "Usage of %s:\n", os.Args[0])
-	fmt.Fprintf(os.Stderr, "docker2aci [--debug] [--nosquash] [--compression=(gzip|none)] IMAGE\n")
+	fmt.Fprintf(os.Stderr, "docker2aci [-debug] [-nosquash] [-compression=(gzip|none)] IMAGE\n")
 	fmt.Fprintf(os.Stderr, "  Where IMAGE is\n")
-	fmt.Fprintf(os.Stderr, "    [--image=IMAGE_NAME[:TAG]] FILEPATH\n")
+	fmt.Fprintf(os.Stderr, "    [-image=IMAGE_NAME[:TAG]] FILEPATH\n")
 	fmt.Fprintf(os.Stderr, "  or\n")
 	fmt.Fprintf(os.Stderr, "    docker://[REGISTRYURL/]IMAGE_NAME[:TAG]\n")
 	fmt.Fprintf(os.Stderr, "Flags:\n")
