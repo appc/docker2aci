@@ -1,8 +1,8 @@
-hash: ad84402ccb32c43d2901b53a933ac2163dc86ce76186e8549d5f6960ea942a41
-updated: 2016-11-07T10:46:26.562906391-08:00
+hash: e2594cc7d95d3df6a3d7332e167a88f13138635ba5b20f828bdb7d7262ca9b92
+updated: 2017-01-11T18:57:45.241081317+03:00
 imports:
 - name: github.com/appc/spec
-  version: 2a251f75b2520d7a1c6c10562a1ea4e303af3e67
+  version: d7de4875ad542ca48f4ff1f1f0a487764a825fbd
   subpackages:
   - aci
   - pkg/acirenderer
@@ -31,13 +31,13 @@ imports:
   subpackages:
   - proto
 - name: github.com/klauspost/compress
-  version: 14eb9c4951195779ecfbec34431a976de7335b0a
+  version: e3b7981a12dd3cab49afa1d3a50e715846f23732
   subpackages:
   - flate
 - name: github.com/klauspost/cpuid
   version: 09cded8978dc9e80714c4d85b0322337b0a1e5e0
 - name: github.com/klauspost/crc32
-  version: 19b0b332c9e4516a6370a0456e6182c3b5036720
+  version: cb6bfca970f6908083f26f39a79009d608efd5cd
 - name: github.com/klauspost/pgzip
   version: 95e8170c5d4da28db9c64dfc9ec3138ea4466fd4
 - name: github.com/opencontainers/image-spec
@@ -61,9 +61,7 @@ imports:
 - name: gopkg.in/inf.v0
   version: 3887ee99ecf07df5b447e9b00d9c0b2adaa9f3e4
 - name: k8s.io/kubernetes
-  version: 759dd0dfb826658c78db42d97b77b9594cd43333
+  version: ba5b2fcee9d938dae74d4474f68d9d0933f3ec04
   subpackages:
   - pkg/api/resource
-  - pkg/conversion
-  - third_party/forked/reflect
 testImports: []
