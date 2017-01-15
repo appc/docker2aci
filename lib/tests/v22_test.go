@@ -22,36 +22,79 @@ import (
 
 const variableTestValue = "variant"
 
-var dockerConfig = typesV2.ImageConfig{
-	Created:      "2016-06-02T21:43:31.291506236Z",
-	Author:       "rkt developer <rkt-dev@googlegroups.com>",
-	Architecture: "amd64",
-	OS:           "linux",
-	Config: &typesV2.ImageConfigConfig{
-		User:       "",
-		Memory:     12345,
-		MemorySwap: 0,
-		CpuShares:  9001,
-		ExposedPorts: map[string]struct{}{
-			"80": struct{}{},
-		},
-		Env: []string{
-			"FOO=1",
-		},
-		Entrypoint: []string{
-			"/bin/sh",
-			"-c",
-			"echo",
-		},
-		Cmd: []string{
-			"foo",
-		},
-		Volumes:    nil,
-		WorkingDir: "/",
-	},
+// osArchTuple is a placeholder for operating system name and respective
+// supported architecture.
+type osArchTuple struct {
+	Os   string
+	Arch string
 }
 
-func expectedManifest(registryUrl, imageName string) schema.ImageManifest {
+// osArchTuples defines the list of Go os/arch pairs used to test the
+// conversion of Docker images to ACIs.
+var osArchTuples = []osArchTuple{
+	{"linux", "amd64"},
+	{"linux", "386"},
+	{"linux", "arm64"},
+	{"linux", "arm"},
+	{"linux", "ppc64"},
+	{"linux", "ppc64le"},
+	{"linux", "s390x"},
+
+	{"freebsd", "amd64"},
+	{"freebsd", "386"},
+	{"freebsd", "arm"},
+
+	{"darwin", "amd64"},
+	{"darwin", "386"},
+}
+
+// dockerImageConfig defines the common image configuration.
+var dockerImageConfig = typesV2.ImageConfigConfig{
+	User:       "",
+	Memory:     12345,
+	MemorySwap: 0,
+	CpuShares:  9001,
+	ExposedPorts: map[string]struct{}{
+		"80": struct{}{},
+	},
+	Env: []string{
+		"FOO=1",
+	},
+	Entrypoint: []string{
+		"/bin/sh",
+		"-c",
+		"echo",
+	},
+	Cmd: []string{
+		"foo",
+	},
+	Volumes:    nil,
+	WorkingDir: "/",
+}
+
+// testDocker22Images generates the Docker images v22 for all supported
+// os/arch pairs and calls the passed testing function.
+func testDocker22Images(layers []Layer, fn func(Docker22Image)) {
+	for _, tuple := range osArchTuples {
+		config := typesV2.ImageConfig{
+			Created:      "2016-06-02T21:43:31.291506236Z",
+			Author:       "rkt developer <rkt-dev@googlegroups.com>",
+			Architecture: tuple.Arch,
+			OS:           tuple.Os,
+			Config:       &dockerImageConfig,
+		}
+
+		// Create a new Docker image configuration and pass it to
+		// the testing function.
+		fn(Docker22Image{
+			RepoTags: []string{"testimage:latest"},
+			Layers:   layers,
+			Config:   config,
+		})
+	}
+}
+
+func expectedManifest(registryUrl, imageName, imageOs, imageArch string) schema.ImageManifest {
 	return schema.ImageManifest{
 		ACKind:    types.ACKind("ImageManifest"),
 		ACVersion: schema.AppContainerVersion,
@@ -59,11 +102,11 @@ func expectedManifest(registryUrl, imageName string) schema.ImageManifest {
 		Labels: []types.Label{
 			types.Label{
 				Name:  *types.MustACIdentifier("arch"),
-				Value: "amd64",
+				Value: imageArch,
 			},
 			types.Label{
 				Name:  *types.MustACIdentifier("os"),
-				Value: "linux",
+				Value: imageOs,
 			},
 			types.Label{
 				Name:  *types.MustACIdentifier("version"),
@@ -134,14 +177,6 @@ func expectedManifest(registryUrl, imageName string) schema.ImageManifest {
 	}
 }
 
-func newDocker22Image(layers []Layer) Docker22Image {
-	return Docker22Image{
-		RepoTags: []string{"testimage:latest"},
-		Layers:   layers,
-		Config:   dockerConfig,
-	}
-}
-
 func fetchImage(imgName, outputDir string, squash bool) ([]string, error) {
 	conversionTmpDir, err := ioutil.TempDir("", "docker2aci-test-")
 	if err != nil {
@@ -168,11 +203,6 @@ func fetchImage(imgName, outputDir string, squash bool) ([]string, error) {
 }
 
 func TestFetchingByTagV22(t *testing.T) {
-	tmpDir, err := ioutil.TempDir("", "docker2aci-test-")
-	if err != nil {
-		t.Fatalf("%v", err)
-	}
-	defer os.RemoveAll(tmpDir)
 	layers := []Layer{
 		Layer{
 			&tar.Header{
@@ -182,47 +212,64 @@ func TestFetchingByTagV22(t *testing.T) {
 			}: []byte("these are its contents"),
 		},
 	}
-	err = GenerateDocker22(tmpDir, newDocker22Image(layers))
-	if err != nil {
-		t.Fatalf("%v", err)
-	}
-	imgName := "docker2aci/dockerv22test"
-	imgRef := "v0.1.0"
-	server := RunDockerRegistry(t, tmpDir, imgName, imgRef, typesV2.MediaTypeDockerV22Manifest)
-	defer server.Close()
 
-	bareServerURL := strings.TrimPrefix(server.URL, "http://")
-	localUrl := path.Join(bareServerURL, imgName) + ":" + imgRef
+	testDocker22Images(layers, func(img Docker22Image) {
+		tmpDir, err := ioutil.TempDir("", "docker2aci-test-")
+		if err != nil {
+			t.Fatalf("%v", err)
+		}
+		defer os.RemoveAll(tmpDir)
 
-	expectedImageManifest := expectedManifest(bareServerURL, localUrl)
+		err = GenerateDocker22(tmpDir, img)
+		if err != nil {
+			t.Fatalf("%v", err)
+		}
+		imgName := "docker2aci/dockerv22test"
+		imgRef := "v0.1.0"
+		server := RunDockerRegistry(t, tmpDir, imgName, imgRef, typesV2.MediaTypeDockerV22Manifest)
+		defer server.Close()
 
-	outputDir, err := ioutil.TempDir("", "docker2aci-test-")
-	if err != nil {
-		t.Fatalf("%v", err)
-	}
-	defer os.RemoveAll(outputDir)
+		bareServerURL := strings.TrimPrefix(server.URL, "http://")
+		localUrl := path.Join(bareServerURL, imgName) + ":" + imgRef
 
-	acis, err := fetchImage(localUrl, outputDir, true)
-	if err != nil {
-		t.Fatalf("%v", err)
-	}
+		// Convert the Docker image os/arch pair into values compatible
+		// with application container image specification.
+		imgOs, imgArch := img.Config.OS, img.Config.Architecture
+		imgOs, imgArch, err = types.ToAppcOSArch(imgOs, imgArch, "")
+		if err != nil {
+			t.Errorf("unexpected error: %v", err)
+		}
 
-	converted := acis[0]
+		expectedImageManifest := expectedManifest(bareServerURL, localUrl, imgOs, imgArch)
 
-	f, err := os.Open(converted)
-	if err != nil {
-		t.Fatalf("%v", err)
-	}
-	defer f.Close()
+		outputDir, err := ioutil.TempDir("", "docker2aci-test-")
+		if err != nil {
+			t.Fatalf("%v", err)
+		}
+		defer os.RemoveAll(outputDir)
 
-	manifest, err := aci.ManifestFromImage(f)
-	if err != nil {
-		t.Fatalf("%v", err)
-	}
+		acis, err := fetchImage(localUrl, outputDir, true)
+		if err != nil {
+			t.Fatalf("%v", err)
+		}
 
-	if err := manifestEqual(manifest, &expectedImageManifest); err != nil {
-		t.Fatalf("manifest doesn't match expected manifest: %v", err)
-	}
+		converted := acis[0]
+
+		f, err := os.Open(converted)
+		if err != nil {
+			t.Fatalf("%v", err)
+		}
+		defer f.Close()
+
+		manifest, err := aci.ManifestFromImage(f)
+		if err != nil {
+			t.Fatalf("%v", err)
+		}
+
+		if err := manifestEqual(manifest, &expectedImageManifest); err != nil {
+			t.Errorf("manifest doesn't match expected manifest: %v", err)
+		}
+	})
 }
 
 func manifestEqual(manifest, expected *schema.ImageManifest) error {
@@ -273,11 +320,6 @@ func manifestEqual(manifest, expected *schema.ImageManifest) error {
 }
 
 func TestFetchingByDigestV22(t *testing.T) {
-	tmpDir, err := ioutil.TempDir("", "docker2aci-test-")
-	if err != nil {
-		t.Fatalf("%v", err)
-	}
-	defer os.RemoveAll(tmpDir)
 	layers := []Layer{
 		Layer{
 			&tar.Header{
@@ -287,35 +329,39 @@ func TestFetchingByDigestV22(t *testing.T) {
 			}: []byte("these are its contents"),
 		},
 	}
-	err = GenerateDocker22(tmpDir, newDocker22Image(layers))
-	if err != nil {
-		t.Fatalf("%v", err)
-	}
-	imgName := "docker2aci/dockerv22test"
-	imgRef := "sha256:45b23dee08af5e43a7fea6c4cf9c25ccf269ee113168c19722f87876677c5cb2"
-	server := RunDockerRegistry(t, tmpDir, imgName, imgRef, typesV2.MediaTypeDockerV22Manifest)
-	defer server.Close()
 
-	localUrl := path.Join(strings.TrimPrefix(server.URL, "http://"), imgName) + "@" + imgRef
+	testDocker22Images(layers, func(img Docker22Image) {
+		tmpDir, err := ioutil.TempDir("", "docker2aci-test-")
+		if err != nil {
+			t.Fatalf("%v", err)
+		}
+		defer os.RemoveAll(tmpDir)
 
-	outputDir, err := ioutil.TempDir("", "docker2aci-test-")
-	if err != nil {
-		t.Fatalf("%v", err)
-	}
-	defer os.RemoveAll(outputDir)
+		err = GenerateDocker22(tmpDir, img)
+		if err != nil {
+			t.Fatalf("%v", err)
+		}
+		imgName := "docker2aci/dockerv22test"
+		imgRef := "sha256:45b23dee08af5e43a7fea6c4cf9c25ccf269ee113168c19722f87876677c5cb2"
+		server := RunDockerRegistry(t, tmpDir, imgName, imgRef, typesV2.MediaTypeDockerV22Manifest)
+		defer server.Close()
 
-	_, err = fetchImage(localUrl, outputDir, true)
-	if err != nil {
-		t.Fatalf("%v", err)
-	}
+		localUrl := path.Join(strings.TrimPrefix(server.URL, "http://"), imgName) + "@" + imgRef
+
+		outputDir, err := ioutil.TempDir("", "docker2aci-test-")
+		if err != nil {
+			t.Fatalf("%v", err)
+		}
+		defer os.RemoveAll(outputDir)
+
+		_, err = fetchImage(localUrl, outputDir, true)
+		if err != nil {
+			t.Fatalf("%v", err)
+		}
+	})
 }
 
 func TestFetchingMultipleLayersV22(t *testing.T) {
-	tmpDir, err := ioutil.TempDir("", "docker2aci-test-")
-	if err != nil {
-		t.Fatalf("%v", err)
-	}
-	defer os.RemoveAll(tmpDir)
 	layers := []Layer{
 		Layer{
 			&tar.Header{
@@ -332,25 +378,34 @@ func TestFetchingMultipleLayersV22(t *testing.T) {
 			}: []byte("the contents of this file are different from the last!"),
 		},
 	}
-	err = GenerateDocker22(tmpDir, newDocker22Image(layers))
-	if err != nil {
-		t.Fatalf("%v", err)
-	}
-	imgName := "docker2aci/dockerv22test"
-	imgRef := "v0.1.0"
-	server := RunDockerRegistry(t, tmpDir, imgName, imgRef, typesV2.MediaTypeDockerV22Manifest)
-	defer server.Close()
 
-	localUrl := path.Join(strings.TrimPrefix(server.URL, "http://"), imgName) + ":" + imgRef
+	testDocker22Images(layers, func(img Docker22Image) {
+		tmpDir, err := ioutil.TempDir("", "docker2aci-test-")
+		if err != nil {
+			t.Fatalf("%v", err)
+		}
+		defer os.RemoveAll(tmpDir)
 
-	outputDir, err := ioutil.TempDir("", "docker2aci-test-")
-	if err != nil {
-		t.Fatalf("%v", err)
-	}
-	defer os.RemoveAll(outputDir)
+		err = GenerateDocker22(tmpDir, img)
+		if err != nil {
+			t.Fatalf("%v", err)
+		}
+		imgName := "docker2aci/dockerv22test"
+		imgRef := "v0.1.0"
+		server := RunDockerRegistry(t, tmpDir, imgName, imgRef, typesV2.MediaTypeDockerV22Manifest)
+		defer server.Close()
 
-	_, err = fetchImage(localUrl, outputDir, true)
-	if err != nil {
-		t.Fatalf("%v", err)
-	}
+		localUrl := path.Join(strings.TrimPrefix(server.URL, "http://"), imgName) + ":" + imgRef
+
+		outputDir, err := ioutil.TempDir("", "docker2aci-test-")
+		if err != nil {
+			t.Fatalf("%v", err)
+		}
+		defer os.RemoveAll(outputDir)
+
+		_, err = fetchImage(localUrl, outputDir, true)
+		if err != nil {
+			t.Fatalf("%v", err)
+		}
+	})
 }
