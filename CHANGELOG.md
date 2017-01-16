@@ -1,3 +1,12 @@
+## v0.15.0
+
+This release improves translation of arch labels and image name annotations. It also changes the default output image filename.
+
+ - Translate "os" and "arch" labels of image manifest ([#234](https://github.com/appc/docker2aci/pull/234)).
+ - Minor style changes ([#230](https://github.com/appc/docker2aci/pull/230)).
+ - Bump appc/spec library version to 0.8.9 ([#233](https://github.com/appc/docker2aci/pull/233)).
+ - Image from file improvements; guesses at "originalname" and fixes for "--image"([#229](https://github.com/appc/docker2aci/pull/229)).
+
 ## v0.14.0
 
 This release adds compatibility for OCI v1.0.0-rc2 types, introduces supports for converting image labels, and fixes some issues related to automatic fallback to registry API v1.
