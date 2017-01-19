@@ -66,9 +66,11 @@ func (c *CommonConfig) initLogger() {
 // converting Docker images.
 type RemoteConfig struct {
 	CommonConfig
-	Username string                // username to use if the image to convert needs authentication
-	Password string                // password to use if the image to convert needs authentication
-	Insecure common.InsecureConfig // Insecure options
+	Username        string                // username to use if the image to convert needs authentication
+	Password        string                // password to use if the image to convert needs authentication
+	Insecure        common.InsecureConfig // Insecure options
+	MediaTypes      common.MediaTypeSet
+	RegistryOptions common.RegistryOptionSet
 }
 
 // FileConfig represents the saved file specific configuration for converting
@@ -95,6 +97,8 @@ func ConvertRemoteRepo(dockerURL string, config RemoteConfig) ([]string, error) 
 			config.Password,
 			config.Insecure,
 			config.Debug,
+			config.MediaTypes,
+			config.RegistryOptions,
 		),
 		dockerURL: dockerURL,
 		config:    config.CommonConfig,

@@ -21,6 +21,7 @@ go vet ./pkg/...
 go vet ./lib/...
 go test -v ${REPO_PATH}/lib/tests
 go test -v ${REPO_PATH}/lib/internal
+go test -v ${REPO_PATH}/lib/common
 
 DOCKER2ACI=../bin/docker2aci
 PREFIX=docker2aci-tests

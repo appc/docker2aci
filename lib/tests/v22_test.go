@@ -230,7 +230,7 @@ func TestFetchingByTagV22(t *testing.T) {
 		}
 		imgName := "docker2aci/dockerv22test"
 		imgRef := "v0.1.0"
-		server := RunDockerRegistry(t, tmpDir, imgName, imgRef, typesV2.MediaTypeDockerV22Manifest)
+		server := RunDockerRegistry(t, tmpDir, imgName, imgRef, d2acommon.MediaTypeDockerV22Manifest)
 		defer server.Close()
 
 		bareServerURL := strings.TrimPrefix(server.URL, "http://")
@@ -347,7 +347,7 @@ func TestFetchingByDigestV22(t *testing.T) {
 		}
 		imgName := "docker2aci/dockerv22test"
 		imgRef := "sha256:45b23dee08af5e43a7fea6c4cf9c25ccf269ee113168c19722f87876677c5cb2"
-		server := RunDockerRegistry(t, tmpDir, imgName, imgRef, typesV2.MediaTypeDockerV22Manifest)
+		server := RunDockerRegistry(t, tmpDir, imgName, imgRef, d2acommon.MediaTypeDockerV22Manifest)
 		defer server.Close()
 
 		localUrl := path.Join(strings.TrimPrefix(server.URL, "http://"), imgName) + "@" + imgRef
@@ -396,7 +396,7 @@ func TestFetchingMultipleLayersV22(t *testing.T) {
 		}
 		imgName := "docker2aci/dockerv22test"
 		imgRef := "v0.1.0"
-		server := RunDockerRegistry(t, tmpDir, imgName, imgRef, typesV2.MediaTypeDockerV22Manifest)
+		server := RunDockerRegistry(t, tmpDir, imgName, imgRef, d2acommon.MediaTypeDockerV22Manifest)
 		defer server.Close()
 
 		localUrl := path.Join(strings.TrimPrefix(server.URL, "http://"), imgName) + ":" + imgRef

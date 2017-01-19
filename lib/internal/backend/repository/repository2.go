@@ -295,13 +295,7 @@ func (rb *RepositoryBackend) getManifestV2(dockerURL *common.ParsedDockerURL) ([
 
 	rb.setBasicAuth(req)
 
-	accepting := []string{
-		typesV2.MediaTypeOCIManifest,
-		typesV2.MediaTypeDockerV22Manifest,
-		typesV2.MediaTypeDockerV21Manifest,
-	}
-
-	res, err := rb.makeRequest(req, dockerURL.ImageName, accepting)
+	res, err := rb.makeRequest(req, dockerURL.ImageName, rb.mediaTypes.ManifestMediaTypes())
 	if err != nil {
 		return nil, "", err
 	}
@@ -312,9 +306,9 @@ func (rb *RepositoryBackend) getManifestV2(dockerURL *common.ParsedDockerURL) ([
 	}
 
 	switch res.Header.Get("content-type") {
-	case typesV2.MediaTypeDockerV22Manifest, typesV2.MediaTypeOCIManifest:
+	case common.MediaTypeDockerV22Manifest, common.MediaTypeOCIV1Manifest:
 		return rb.getManifestV22(dockerURL, res)
-	case typesV2.MediaTypeDockerV21Manifest:
+	case common.MediaTypeDockerV21Manifest:
 		return rb.getManifestV21(dockerURL, res)
 	}
 	return rb.getManifestV21(dockerURL, res)
@@ -405,12 +399,7 @@ func (rb *RepositoryBackend) getConfigV22(dockerURL *common.ParsedDockerURL, con
 
 	rb.setBasicAuth(req)
 
-	accepting := []string{
-		typesV2.MediaTypeOCIConfig,
-		typesV2.MediaTypeDockerV22Config,
-	}
-
-	res, err := rb.makeRequest(req, dockerURL.ImageName, accepting)
+	res, err := rb.makeRequest(req, dockerURL.ImageName, rb.mediaTypes.ConfigMediaTypes())
 	if err != nil {
 		return err
 	}
@@ -491,12 +480,7 @@ func (rb *RepositoryBackend) getLayerV2(layerID string, dockerURL *common.Parsed
 
 	rb.setBasicAuth(req)
 
-	accepting := []string{
-		typesV2.MediaTypeDockerV22RootFS,
-		typesV2.MediaTypeOCILayer,
-	}
-
-	res, err = rb.makeRequest(req, dockerURL.ImageName, accepting)
+	res, err = rb.makeRequest(req, dockerURL.ImageName, rb.mediaTypes.LayerMediaTypes())
 	if err != nil {
 		return nil, nil, err
 	}
@@ -516,7 +500,7 @@ func (rb *RepositoryBackend) getLayerV2(layerID string, dockerURL *common.Parsed
 			}
 			res.Body.Close()
 			res = nil
-			res, err = rb.makeRequest(req, dockerURL.ImageName, accepting)
+			res, err = rb.makeRequest(req, dockerURL.ImageName, rb.mediaTypes.LayerMediaTypes())
 			if err != nil {
 				return nil, nil, err
 			}
