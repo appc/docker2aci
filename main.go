@@ -37,6 +37,7 @@ var (
 	flagInsecureAllowHTTP  bool
 	flagCompression        string
 	flagVersion            bool
+	flagOCISupport         bool
 )
 
 func init() {
@@ -47,6 +48,7 @@ func init() {
 	flag.BoolVar(&flagInsecureAllowHTTP, "insecure-allow-http", false, "Uses unencrypted connections when fetching images")
 	flag.StringVar(&flagCompression, "compression", "gzip", "Type of compression to use; allowed values: gzip, none")
 	flag.BoolVar(&flagVersion, "version", false, "Print version")
+	flag.BoolVar(&flagOCISupport, "experimental-oci", false, "Enable experimental OCI support")
 }
 
 func printVersion() {
@@ -111,6 +113,7 @@ func runDocker2ACI(arg string) error {
 				SkipVerify: flagInsecureSkipVerify,
 				AllowHTTP:  flagInsecureAllowHTTP,
 			},
+			OCISupport: flagOCISupport,
 		}
 
 		aciLayerPaths, err = docker2aci.ConvertRemoteRepo(dockerURL, remoteConfig)

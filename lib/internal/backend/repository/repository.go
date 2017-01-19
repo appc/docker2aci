@@ -67,11 +67,12 @@ type RepositoryBackend struct {
 	imageV2Manifests  map[common.ParsedDockerURL]*typesV2.ImageManifest
 	imageConfigs      map[common.ParsedDockerURL]*typesV2.ImageConfig
 	layersIndex       map[string]int
+	ociSupport        bool
 
 	debug log.Logger
 }
 
-func NewRepositoryBackend(username string, password string, insecure common.InsecureConfig, debug log.Logger) *RepositoryBackend {
+func NewRepositoryBackend(username string, password string, insecure common.InsecureConfig, debug log.Logger, ociSupport bool) *RepositoryBackend {
 	return &RepositoryBackend{
 		username:          username,
 		password:          password,
@@ -83,6 +84,7 @@ func NewRepositoryBackend(username string, password string, insecure common.Inse
 		imageV2Manifests:  make(map[common.ParsedDockerURL]*typesV2.ImageManifest),
 		imageConfigs:      make(map[common.ParsedDockerURL]*typesV2.ImageConfig),
 		layersIndex:       make(map[string]int),
+		ociSupport:        ociSupport,
 		debug:             debug,
 	}
 }
