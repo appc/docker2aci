@@ -15,8 +15,6 @@
 package repository
 
 import (
-	"crypto/sha256"
-	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -37,6 +35,7 @@ import (
 	"github.com/appc/docker2aci/lib/internal/util"
 	"github.com/appc/spec/schema"
 	"github.com/coreos/pkg/progressutil"
+	godigest "github.com/opencontainers/go-digest"
 )
 
 const (
@@ -334,9 +333,7 @@ func (rb *RepositoryBackend) getManifestV21(dockerURL *common.ParsedDockerURL, r
 		return nil, "", err
 	}
 
-	s := sha256.New()
-	s.Write(manblob)
-	manhash := hex.EncodeToString(s.Sum(nil))
+	manhash := godigest.FromBytes(manblob)
 
 	if manifest.Name != dockerURL.ImageName {
 		return nil, "", fmt.Errorf("name doesn't match what was requested, expected: %s, downloaded: %s", dockerURL.ImageName, manifest.Name)
@@ -363,7 +360,7 @@ func (rb *RepositoryBackend) getManifestV21(dockerURL *common.ParsedDockerURL, r
 
 	rb.imageManifests[*dockerURL] = *manifest
 
-	return layers, manhash, nil
+	return layers, string(manhash), nil
 }
 
 func (rb *RepositoryBackend) getManifestV22(dockerURL *common.ParsedDockerURL, res *http.Response) ([]string, string, error) {
@@ -379,9 +376,7 @@ func (rb *RepositoryBackend) getManifestV22(dockerURL *common.ParsedDockerURL, r
 		return nil, "", err
 	}
 
-	s := sha256.New()
-	s.Write(manblob)
-	manhash := hex.EncodeToString(s.Sum(nil))
+	manhash := godigest.FromBytes(manblob)
 
 	//TODO: verify signature here
 
@@ -398,7 +393,7 @@ func (rb *RepositoryBackend) getManifestV22(dockerURL *common.ParsedDockerURL, r
 
 	rb.imageV2Manifests[*dockerURL] = manifest
 
-	return layers, manhash, nil
+	return layers, string(manhash), nil
 }
 
 func (rb *RepositoryBackend) getConfigV22(dockerURL *common.ParsedDockerURL, configDigest string) error {

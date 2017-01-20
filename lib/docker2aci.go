@@ -42,10 +42,11 @@ import (
 // CommonConfig represents the shared configuration options for converting
 // Docker images.
 type CommonConfig struct {
-	Squash      bool               // squash the layers in one file
-	OutputDir   string             // where to put the resulting ACI
-	TmpDir      string             // directory to use for temporary files
-	Compression common.Compression // which compression to use for the resulting file(s)
+	Squash                bool               // squash the layers in one file
+	OutputDir             string             // where to put the resulting ACI
+	TmpDir                string             // directory to use for temporary files
+	Compression           common.Compression // which compression to use for the resulting file(s)
+	CurrentManifestHashes []string           // any manifest hashes the caller already has
 
 	Info  log.Logger
 	Debug log.Logger
@@ -144,6 +145,11 @@ func (c *converter) convert() ([]string, error) {
 	ancestry, manhash, parsedDockerURL, err := c.backend.GetImageInfo(c.dockerURL)
 	if err != nil {
 		return nil, err
+	}
+	for _, h := range c.config.CurrentManifestHashes {
+		if manhash == h {
+			return nil, nil
+		}
 	}
 
 	layersOutputDir := c.config.OutputDir
