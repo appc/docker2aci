@@ -141,7 +141,7 @@ type converter struct {
 
 func (c *converter) convert() ([]string, error) {
 	c.config.Debug.Println("Getting image info...")
-	ancestry, parsedDockerURL, err := c.backend.GetImageInfo(c.dockerURL)
+	ancestry, manhash, parsedDockerURL, err := c.backend.GetImageInfo(c.dockerURL)
 	if err != nil {
 		return nil, err
 	}
@@ -163,7 +163,7 @@ func (c *converter) convert() ([]string, error) {
 		layerCompression = common.NoCompression
 	}
 
-	aciLayerPaths, aciManifests, err := c.backend.BuildACI(ancestry, parsedDockerURL, layersOutputDir, c.config.TmpDir, layerCompression)
+	aciLayerPaths, aciManifests, err := c.backend.BuildACI(ancestry, manhash, parsedDockerURL, layersOutputDir, c.config.TmpDir, layerCompression)
 	if err != nil {
 		return nil, err
 	}

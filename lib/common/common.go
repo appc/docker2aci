@@ -48,6 +48,7 @@ const (
 	AppcDockerParentImageID = "appc.io/docker/parentimageid"
 	AppcDockerEntrypoint    = "appc.io/docker/entrypoint"
 	AppcDockerCmd           = "appc.io/docker/cmd"
+	AppcDockerManifestHash  = "appc.io/docker/manifesthash"
 )
 
 const defaultTag = "latest"

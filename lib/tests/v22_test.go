@@ -162,6 +162,10 @@ func expectedManifest(registryUrl, imageName, imageOs, imageArch string) schema.
 				// Different each testrun for unknown reasons
 			},
 			{
+				Name:  *types.MustACIdentifier("appc.io/docker/manifesthash"),
+				Value: variableTestValue,
+			},
+			{
 				Name:  *types.MustACIdentifier("appc.io/docker/originalname"),
 				Value: imageName,
 			},
