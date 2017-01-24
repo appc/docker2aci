@@ -23,3 +23,5 @@ import:
   version: v1.0.0-rc2
   subpackages:
   - specs-go
+- package: golang.org/x/net
+  version: f2499483f923065a842d38eb4c7f1927e6fc6e6d
