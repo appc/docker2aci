@@ -23,3 +23,5 @@ import:
   version: v1.0.0-rc2
   subpackages:
   - specs-go
+- package: github.com/opencontainers/go-digest
+  version: 21dfd564fd89c944783d00d069f33e3e7123c448
