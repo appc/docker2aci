@@ -87,10 +87,16 @@ func NewRepositoryBackend(username string, password string, insecure common.Inse
 	}
 }
 
-func (rb *RepositoryBackend) GetImageInfo(url string) ([]string, *common.ParsedDockerURL, error) {
+// GetImageInfo, given the url for a docker image, will return the
+// following:
+// - []string: an ordered list of all layer hashes
+// - string: a unique identifier for this image, like a hash of the manifest
+// - *common.ParsedDockerURL: a parsed docker URL
+// - error: an error if one occurred
+func (rb *RepositoryBackend) GetImageInfo(url string) ([]string, string, *common.ParsedDockerURL, error) {
 	dockerURL, err := common.ParseDockerURL(url)
 	if err != nil {
-		return nil, nil, err
+		return nil, "", nil, err
 	}
 
 	var supportsV2, supportsV1, ok bool
@@ -100,7 +106,7 @@ func (rb *RepositoryBackend) GetImageInfo(url string) ([]string, *common.ParsedD
 		var err error
 		URLSchema, supportsV2, err = rb.supportsRegistry(dockerURL.IndexURL, registryV2)
 		if err != nil {
-			return nil, nil, err
+			return nil, "", nil, err
 		}
 		rb.schema = URLSchema + "://"
 		rb.hostsV2Support[dockerURL.IndexURL] = supportsV2
@@ -108,9 +114,9 @@ func (rb *RepositoryBackend) GetImageInfo(url string) ([]string, *common.ParsedD
 
 	// try v2
 	if supportsV2 {
-		layers, dockerURL, err := rb.getImageInfoV2(dockerURL)
+		layers, manhash, dockerURL, err := rb.getImageInfoV2(dockerURL)
 		if !isErrHTTP404(err) {
-			return layers, dockerURL, err
+			return layers, manhash, dockerURL, err
 		}
 		// fallback on 404 failure
 		rb.hostsV1fallback = true
@@ -118,24 +124,24 @@ func (rb *RepositoryBackend) GetImageInfo(url string) ([]string, *common.ParsedD
 
 	URLSchema, supportsV1, err = rb.supportsRegistry(dockerURL.IndexURL, registryV1)
 	if err != nil {
-		return nil, nil, err
+		return nil, "", nil, err
 	}
 	if !supportsV1 && rb.hostsV1fallback {
-		return nil, nil, fmt.Errorf("attempted fallback to API v1 but not supported")
+		return nil, "", nil, fmt.Errorf("attempted fallback to API v1 but not supported")
 	}
 	if !supportsV1 && !supportsV2 {
-		return nil, nil, fmt.Errorf("registry doesn't support API v2 nor v1")
+		return nil, "", nil, fmt.Errorf("registry doesn't support API v2 nor v1")
 	}
 	rb.schema = URLSchema + "://"
 	// try v1, hard fail on failure
 	return rb.getImageInfoV1(dockerURL)
 }
 
-func (rb *RepositoryBackend) BuildACI(layerIDs []string, dockerURL *common.ParsedDockerURL, outputDir string, tmpBaseDir string, compression common.Compression) ([]string, []*schema.ImageManifest, error) {
+func (rb *RepositoryBackend) BuildACI(layerIDs []string, manhash string, dockerURL *common.ParsedDockerURL, outputDir string, tmpBaseDir string, compression common.Compression) ([]string, []*schema.ImageManifest, error) {
 	if rb.hostsV1fallback || !rb.hostsV2Support[dockerURL.IndexURL] {
-		return rb.buildACIV1(layerIDs, dockerURL, outputDir, tmpBaseDir, compression)
+		return rb.buildACIV1(layerIDs, manhash, dockerURL, outputDir, tmpBaseDir, compression)
 	} else {
-		return rb.buildACIV2(layerIDs, dockerURL, outputDir, tmpBaseDir, compression)
+		return rb.buildACIV2(layerIDs, manhash, dockerURL, outputDir, tmpBaseDir, compression)
 	}
 }
 
