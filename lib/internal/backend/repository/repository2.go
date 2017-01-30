@@ -296,9 +296,11 @@ func (rb *RepositoryBackend) getManifestV2(dockerURL *common.ParsedDockerURL) ([
 	rb.setBasicAuth(req)
 
 	accepting := []string{
-		typesV2.MediaTypeOCIManifest,
 		typesV2.MediaTypeDockerV22Manifest,
 		typesV2.MediaTypeDockerV21Manifest,
+	}
+	if rb.ociSupport {
+		accepting = append(accepting, typesV2.MediaTypeOCIManifest)
 	}
 
 	res, err := rb.makeRequest(req, dockerURL.ImageName, accepting)
@@ -405,9 +407,9 @@ func (rb *RepositoryBackend) getConfigV22(dockerURL *common.ParsedDockerURL, con
 
 	rb.setBasicAuth(req)
 
-	accepting := []string{
-		typesV2.MediaTypeOCIConfig,
-		typesV2.MediaTypeDockerV22Config,
+	accepting := []string{typesV2.MediaTypeDockerV22Config}
+	if rb.ociSupport {
+		accepting = append(accepting, typesV2.MediaTypeOCIConfig)
 	}
 
 	res, err := rb.makeRequest(req, dockerURL.ImageName, accepting)
@@ -491,9 +493,9 @@ func (rb *RepositoryBackend) getLayerV2(layerID string, dockerURL *common.Parsed
 
 	rb.setBasicAuth(req)
 
-	accepting := []string{
-		typesV2.MediaTypeDockerV22RootFS,
-		typesV2.MediaTypeOCILayer,
+	accepting := []string{typesV2.MediaTypeDockerV22RootFS}
+	if rb.ociSupport {
+		accepting = append(accepting, typesV2.MediaTypeOCILayer)
 	}
 
 	res, err = rb.makeRequest(req, dockerURL.ImageName, accepting)
