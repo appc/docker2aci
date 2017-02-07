@@ -10,6 +10,7 @@ import (
 	"os"
 	"path"
 
+	"github.com/appc/docker2aci/lib/common"
 	"github.com/appc/docker2aci/lib/internal/typesV2"
 )
 
@@ -105,9 +106,9 @@ func GenDocker22Manifest(destPath, configHash string, layerHashes []string) erro
 
 	manifest := &typesV2.ImageManifest{
 		SchemaVersion: 2,
-		MediaType:     typesV2.MediaTypeDockerV22Manifest,
+		MediaType:     common.MediaTypeDockerV22Manifest,
 		Config: &typesV2.ImageManifestDigest{
-			MediaType: typesV2.MediaTypeDockerV22Config,
+			MediaType: common.MediaTypeDockerV22Config,
 			Size:      int(configSize),
 			Digest:    "sha256:" + configHash,
 		},
@@ -119,7 +120,7 @@ func GenDocker22Manifest(destPath, configHash string, layerHashes []string) erro
 		}
 		manifest.Layers = append(manifest.Layers,
 			&typesV2.ImageManifestDigest{
-				MediaType: typesV2.MediaTypeDockerV22RootFS,
+				MediaType: common.MediaTypeDockerV22RootFS,
 				Size:      int(layerSize),
 				Digest:    "sha256:" + h,
 			})

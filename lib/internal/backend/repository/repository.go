@@ -67,11 +67,13 @@ type RepositoryBackend struct {
 	imageV2Manifests  map[common.ParsedDockerURL]*typesV2.ImageManifest
 	imageConfigs      map[common.ParsedDockerURL]*typesV2.ImageConfig
 	layersIndex       map[string]int
+	mediaTypes        common.MediaTypeSet
+	registryOptions   common.RegistryOptionSet
 
 	debug log.Logger
 }
 
-func NewRepositoryBackend(username string, password string, insecure common.InsecureConfig, debug log.Logger) *RepositoryBackend {
+func NewRepositoryBackend(username, password string, insecure common.InsecureConfig, debug log.Logger, mediaTypes common.MediaTypeSet, registryOptions common.RegistryOptionSet) *RepositoryBackend {
 	return &RepositoryBackend{
 		username:          username,
 		password:          password,
@@ -83,6 +85,8 @@ func NewRepositoryBackend(username string, password string, insecure common.Inse
 		imageV2Manifests:  make(map[common.ParsedDockerURL]*typesV2.ImageManifest),
 		imageConfigs:      make(map[common.ParsedDockerURL]*typesV2.ImageConfig),
 		layersIndex:       make(map[string]int),
+		mediaTypes:        mediaTypes,
+		registryOptions:   registryOptions,
 		debug:             debug,
 	}
 }
@@ -113,13 +117,21 @@ func (rb *RepositoryBackend) GetImageInfo(url string) ([]string, string, *common
 	}
 
 	// try v2
-	if supportsV2 {
+	if supportsV2 && rb.registryOptions.AllowsV2() {
 		layers, manhash, dockerURL, err := rb.getImageInfoV2(dockerURL)
 		if !isErrHTTP404(err) {
 			return layers, manhash, dockerURL, err
 		}
 		// fallback on 404 failure
 		rb.hostsV1fallback = true
+		// unless we can't fallback
+		if !rb.registryOptions.AllowsV1() {
+			return nil, "", nil, err
+		}
+	}
+
+	if !rb.registryOptions.AllowsV1() {
+		return nil, "", nil, fmt.Errorf("no remaining enabled registry options")
 	}
 
 	URLSchema, supportsV1, err = rb.supportsRegistry(dockerURL.IndexURL, registryV1)
