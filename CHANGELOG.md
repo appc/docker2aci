@@ -1,3 +1,11 @@
+## v0.16.0
+
+This release adds a manifest hash annotation on converted images and introduces some API changes to allow for more granular control on registries and media types.
+
+ - Annotate manifest hash ([#237](https://github.com/appc/docker2aci/pull/237)).
+ - Allow selective disabling of registries and media types ([#239](https://github.com/appc/docker2aci/pull/239)).
+ - Update appc/spec to 0.8.10 ([#242](https://github.com/appc/docker2aci/pull/242)).
+
 ## v0.15.0
 
 This release improves translation of arch labels and image name annotations. It also changes the default output image filename.
