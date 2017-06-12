@@ -25,3 +25,7 @@ import:
   - specs-go
 - package: github.com/opencontainers/go-digest
   version: 21dfd564fd89c944783d00d069f33e3e7123c448
+- package: github.com/docker/go
+  version: d30aec9fd63c35133f8f79c3412ad91a3b08be06
+  subpackages:
+  - canonical/json
