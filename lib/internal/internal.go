@@ -42,6 +42,7 @@ import (
 	"github.com/appc/spec/schema"
 	appctypes "github.com/appc/spec/schema/types"
 	gzip "github.com/klauspost/pgzip"
+	canJson "github.com/docker/go/canonical/json"
 )
 
 // Docker2ACIBackend is the interface that abstracts converting Docker layers
@@ -724,7 +725,7 @@ func subtractWhiteouts(pathWhitelist []string, whiteouts []string) []string {
 
 // WriteManifest writes a schema.ImageManifest entry on a tar.Writer.
 func WriteManifest(outputWriter *tar.Writer, manifest schema.ImageManifest) error {
-	b, err := json.Marshal(manifest)
+	b, err := canJson.Marshal(manifest)
 	if err != nil {
 		return err
 	}

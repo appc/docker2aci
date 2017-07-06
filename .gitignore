@@ -33,3 +33,7 @@ tests/*.docker
 
 *.swp
 *.aci
+
+# Intellij files
+*.iml
+.idea
