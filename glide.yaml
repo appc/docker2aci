@@ -14,7 +14,7 @@ import:
   subpackages:
   - progressutil
 - package: github.com/docker/distribution
-  version: v2.5.0-rc.1
+  version: 5db89f0ca68677abc5eefce8f2a0a772c98ba52d
   subpackages:
   - reference
 - package: github.com/klauspost/pgzip
