@@ -15,6 +15,8 @@
 package common
 
 import (
+	_ "crypto/sha256"
+	"reflect"
 	"testing"
 )
 
@@ -119,4 +121,82 @@ loop1:
 		return false
 	}
 	return true
+}
+
+func TestParseDockerURL(t *testing.T) {
+	tests := []struct {
+		input    string
+		expected *ParsedDockerURL
+	}{
+		{
+			"busybox",
+			&ParsedDockerURL{
+				OriginalName: "busybox",
+				IndexURL:     "registry-1.docker.io",
+				ImageName:    "library/busybox",
+				Tag:          "latest",
+				Digest:       "",
+			},
+		},
+		{
+			"library/busybox",
+			&ParsedDockerURL{
+				OriginalName: "library/busybox",
+				IndexURL:     "registry-1.docker.io",
+				ImageName:    "library/busybox",
+				Tag:          "latest",
+				Digest:       "",
+			},
+		},
+		{
+			"docker.io/library/busybox:1",
+			&ParsedDockerURL{
+				OriginalName: "docker.io/library/busybox:1",
+				IndexURL:     "registry-1.docker.io",
+				ImageName:    "library/busybox",
+				Tag:          "1",
+				Digest:       "",
+			},
+		},
+		{
+			"docker.io/library/busybox",
+			&ParsedDockerURL{
+				OriginalName: "docker.io/library/busybox",
+				IndexURL:     "registry-1.docker.io",
+				ImageName:    "library/busybox",
+				Tag:          "latest",
+				Digest:       "",
+			},
+		},
+		{
+			"gcr.io/google-samples/node-hello:1.0",
+			&ParsedDockerURL{
+				OriginalName: "gcr.io/google-samples/node-hello:1.0",
+				IndexURL:     "gcr.io",
+				ImageName:    "google-samples/node-hello",
+				Tag:          "1.0",
+				Digest:       "",
+			},
+		},
+		{
+			"alpine@sha256:ea0d1389812f43e474c50155ec4914e1b48792d420820c15cab28c0794034950",
+			&ParsedDockerURL{
+				OriginalName: "alpine@sha256:ea0d1389812f43e474c50155ec4914e1b48792d420820c15cab28c0794034950",
+				IndexURL:     "registry-1.docker.io",
+				ImageName:    "library/alpine",
+				Tag:          "",
+				Digest:       "sha256:ea0d1389812f43e474c50155ec4914e1b48792d420820c15cab28c0794034950",
+			},
+		},
+	}
+	for _, test := range tests {
+		parsed, err := ParseDockerURL(test.input)
+		if err != nil && test.expected != nil {
+			t.Errorf("error when parsing %q: %v\nexpected: %+v", test.input, err, test.expected)
+		} else if err == nil && test.expected == nil {
+			t.Errorf("expected %q to result in error\n", test.input)
+		} else if !reflect.DeepEqual(test.expected, parsed) {
+			t.Errorf("expected and parsed `&ParsedDockerURL{}` differ:\nexpected: %+v\nparsed:   %+v\n", test.expected, parsed)
+		}
+	}
 }
