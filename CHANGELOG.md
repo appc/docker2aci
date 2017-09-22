@@ -1,3 +1,11 @@
+## v0.17.0
+
+This is mostly a bugfix release that fixes a couple of panics and supports additional docker image syntax.
+
+ - Avoid panicking on scratch images ([248](https://github.com/appc/docker2aci/pull/248)).
+ - Bugfix/panic on invalid env entry ([#249](https://github.com/appc/docker2aci/pull/249)).
+ - lib/common: update `ParseDockerURL` ([#250](https://github.com/appc/docker2aci/pull/250)).
+
 ## v0.16.0
 
 This release adds a manifest hash annotation on converted images and introduces some API changes to allow for more granular control on registries and media types.
