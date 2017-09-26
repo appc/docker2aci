@@ -19,6 +19,7 @@ export GO15VENDOREXPERIMENT=1
 export GOBIN=${DIR}/bin
 export GOPATH=${DIR}/gopath
 export GOOS GOARCH
+export CGO_ENABLED=0
 
 eval $(go env)
 
