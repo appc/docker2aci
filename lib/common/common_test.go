@@ -29,7 +29,7 @@ func TestMediaTypeSet(t *testing.T) {
 	}{
 		{
 			MediaTypeSet{MediaTypeOptionDockerV21},
-			[]string{MediaTypeDockerV21Manifest},
+			[]string{MediaTypeDockerV21Manifest, MediaTypeDockerV21SignedManifest},
 			[]string{},
 			[]string{},
 		},
@@ -47,19 +47,19 @@ func TestMediaTypeSet(t *testing.T) {
 		},
 		{
 			MediaTypeSet{},
-			[]string{MediaTypeDockerV21Manifest, MediaTypeDockerV22Manifest, MediaTypeOCIV1Manifest},
+			[]string{MediaTypeDockerV21Manifest, MediaTypeDockerV21SignedManifest, MediaTypeDockerV22Manifest, MediaTypeOCIV1Manifest},
 			[]string{MediaTypeDockerV22Config, MediaTypeOCIV1Config},
 			[]string{MediaTypeDockerV22RootFS, MediaTypeOCIV1Layer},
 		},
 		{
 			MediaTypeSet{MediaTypeOptionDockerV21, MediaTypeOptionDockerV22, MediaTypeOptionOCIV1Pre},
-			[]string{MediaTypeDockerV21Manifest, MediaTypeDockerV22Manifest, MediaTypeOCIV1Manifest},
+			[]string{MediaTypeDockerV21Manifest, MediaTypeDockerV21SignedManifest, MediaTypeDockerV22Manifest, MediaTypeOCIV1Manifest},
 			[]string{MediaTypeDockerV22Config, MediaTypeOCIV1Config},
 			[]string{MediaTypeDockerV22RootFS, MediaTypeOCIV1Layer},
 		},
 		{
 			MediaTypeSet{MediaTypeOptionDockerV21, MediaTypeOptionOCIV1Pre},
-			[]string{MediaTypeDockerV21Manifest, MediaTypeOCIV1Manifest},
+			[]string{MediaTypeDockerV21Manifest, MediaTypeDockerV21SignedManifest, MediaTypeOCIV1Manifest},
 			[]string{MediaTypeOCIV1Config},
 			[]string{MediaTypeOCIV1Layer},
 		},
