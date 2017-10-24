@@ -1,3 +1,9 @@
+## v0.17.1
+
+This is a bugfix release that fixes pulling certain images from the Google Container Registry.
+
+ - lib: add signed manifest media type ([#255](https://github.com/appc/docker2aci/pull/255)).
+
 ## v0.17.0
 
 This is mostly a bugfix release that fixes a couple of panics and supports additional docker image syntax.
