@@ -16,6 +16,9 @@ fi
 
 export GO15VENDOREXPERIMENT=1
 export GOPATH=${DIR}/gopath
+REPO_GOPATH="${GOPATH}/src/${REPO_PATH}"
+
+cd "${REPO_GOPATH}"
 
 go vet ./pkg/...
 go vet ./lib/...
@@ -25,7 +28,7 @@ go test -v ${REPO_PATH}/lib/common
 
 DOCKER2ACI=../bin/docker2aci
 PREFIX=docker2aci-tests
-TESTDIR=$(dirname $(realpath $0))
+TESTDIR="${REPO_GOPATH}/tests/"
 RKTVERSION=v1.1.0
 
 cd $TESTDIR
