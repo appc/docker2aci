@@ -1,3 +1,10 @@
+## v0.17.2
+
+This is a bugfix release to ensure compatibility with newer go-1.10 toolchain.
+
+ - lib/internal: fix tar header format ([#260](https://github.com/appc/docker2aci/pull/260)).
+ - tests: update script to run within gopath ([#261](https://github.com/appc/docker2aci/pull/261)).
+
 ## v0.17.1
 
 This is a bugfix release that fixes pulling certain images from the Google Container Registry.
